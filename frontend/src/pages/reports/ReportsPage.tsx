@@ -44,8 +44,19 @@ export default function ReportsPage() {
       a.click()
       window.URL.revokeObjectURL(url)
       toast.success(`${type.toUpperCase()} exported successfully!`)
-    } catch {
-      toast.error('Export failed. Please try again.')
+    } catch (err: any) {
+      // Server returns errors as blob when responseType:'blob' — parse it
+      if (err?.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text()
+          const json = JSON.parse(text)
+          toast.error(json.error || 'Export failed.')
+        } catch {
+          toast.error(`Export failed (HTTP ${err?.response?.status ?? 'unknown'})`)
+        }
+      } else {
+        toast.error(err?.message || 'Export failed. Please try again.')
+      }
     } finally {
       setExporting(null)
     }

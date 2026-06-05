@@ -148,9 +148,12 @@ class ExportPDFView(APIView):
             ]))
             story.append(cat_table)
 
-        doc.build(story)
-        buffer.seek(0)
+        try:
+            doc.build(story)
+        except Exception as e:
+            return Response({'error': f'PDF generation failed: {str(e)}'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+        buffer.seek(0)
         response = HttpResponse(buffer, content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="finance_report_{year}_{month:02d}.pdf"'
         return response
