@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [showPass, setShowPass] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm({
     defaultValues: {
-      email: 'jutthamid148@gmail.com',
+      email: '',
       password: '',
     }
   })

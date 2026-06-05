@@ -58,15 +58,21 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
                 year=expense.date.year,
             ).first()
             if budget and budget.is_exceeded:
-                Notification.objects.get_or_create(
+                now = timezone.now()
+                already_notified = Notification.objects.filter(
                     user=self.request.user,
                     notification_type='budget_exceeded',
-                    is_read=False,
-                    defaults={
-                        'title': f'Budget Exceeded: {expense.category.title()}',
-                        'message': f'You have exceeded your {expense.category} budget for this month.',
-                    }
-                )
+                    title=f'Budget Exceeded: {expense.category.title()}',
+                    created_at__month=now.month,
+                    created_at__year=now.year,
+                ).exists()
+                if not already_notified:
+                    Notification.objects.create(
+                        user=self.request.user,
+                        notification_type='budget_exceeded',
+                        title=f'Budget Exceeded: {expense.category.title()}',
+                        message=f'You have exceeded your {expense.category} budget for this month.',
+                    )
         except Exception:
             pass
 

@@ -406,26 +406,6 @@ class AdminStatsView(APIView):
         })
 
 
-class MakeAdminView(APIView):
-    """One-time setup: make a user admin using setup key"""
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        setup_key = request.data.get('setup_key', '')
-        user_id   = request.data.get('user_id', '')
-        if setup_key != 'riphah-fyp-setup-2026':
-            return Response({'error': 'Invalid setup key'}, status=status.HTTP_403_FORBIDDEN)
-        try:
-            u = User.objects.get(id=user_id)
-            u.is_staff = True
-            u.is_superuser = True
-            u.is_verified = True
-            u.save()
-            return Response({'success': True, 'user': u.email, 'is_staff': u.is_staff})
-        except User.DoesNotExist:
-            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-
-
 class GoogleAuthView(APIView):
     """Sign in / sign up with Google via Firebase ID token"""
     permission_classes = [permissions.AllowAny]

@@ -113,7 +113,7 @@ else:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3' if _use_sqlite else '/tmp/db.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 

@@ -18,6 +18,7 @@ class FinanceAnalyzer:
 
     def __init__(self, user):
         self.user = user
+        self._prediction_cache = None
         self._load_data()
 
     def _load_data(self):
@@ -99,7 +100,7 @@ class FinanceAnalyzer:
                 'percentage': round(float(pct), 1),
                 'percentage_of_income': round(float(pct_income), 1),
             })
-            if pct > 35:
+            if pct > 30:
                 insights.append(
                     f"⚠️ {cat.capitalize()} is your biggest expense at {pct:.0f}% of total spending (₨{amount:,.0f})."
                 )
@@ -242,6 +243,9 @@ class FinanceAnalyzer:
     # ──────────────────────────────────────────────────────────────────────────
     def predict_next_month_expenses(self):
         """Use Polynomial Regression to predict next 3 months expenses"""
+        if self._prediction_cache is not None:
+            return self._prediction_cache
+
         if self.expenses_df.empty or len(self.expenses_df) < 3:
             return {
                 'prediction': 0,
@@ -320,7 +324,7 @@ class FinanceAnalyzer:
 
         confidence = 'high' if n >= 4 else 'medium' if n >= 2 else 'low'
 
-        return {
+        self._prediction_cache = {
             'prediction': prediction,
             'confidence': confidence,
             'predictions_by_category': cat_predictions,
@@ -328,6 +332,7 @@ class FinanceAnalyzer:
             'months_analyzed': n,
             'message': f'Prediction based on {n} months of data using Polynomial Regression.',
         }
+        return self._prediction_cache
 
     # ──────────────────────────────────────────────────────────────────────────
     def predict_savings(self):
@@ -346,18 +351,19 @@ class FinanceAnalyzer:
 
         predictions = []
         monthly_preds = exp_data.get('monthly_predictions', [])
+        cumulative = 0.0
         for i in range(1, 7):
             target_date = now + timedelta(days=30 * i)
-            # Use predicted expenses if available for first 3 months
             if i <= len(monthly_preds):
                 exp = monthly_preds[i - 1]['predicted']
             else:
                 exp = next_month_expenses
             sav = max(monthly_income - exp, 0)
+            cumulative += sav
             predictions.append({
                 'month': target_date.strftime('%B %Y'),
                 'predicted_savings': round(sav, 2),
-                'cumulative_savings': round(sav * i, 2),
+                'cumulative_savings': round(cumulative, 2),
                 'predicted_expenses': round(exp, 2),
             })
 

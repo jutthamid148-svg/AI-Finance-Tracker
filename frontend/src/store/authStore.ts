@@ -1,9 +1,6 @@
 import { create } from 'zustand'
-import { authAPI } from '../services/api'
+import api, { authAPI } from '../services/api'
 import { googleSignIn, firebaseSignOut } from '../services/firebase'
-import axios from 'axios'
-
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api'
 
 interface User {
   id: string
@@ -68,7 +65,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true })
     try {
       const { idToken, displayName, photoURL } = await googleSignIn()
-      const { data } = await axios.post(`${API_BASE}/auth/google/`, {
+      const { data } = await api.post('/auth/google/', {
         id_token: idToken,
         display_name: displayName,
         photo_url: photoURL,
