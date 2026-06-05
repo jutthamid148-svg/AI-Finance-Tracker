@@ -8,6 +8,7 @@ from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
 import uuid
+import requests as http_requests
 
 from .models import User, Notification
 from .serializers import (
@@ -285,6 +286,46 @@ class AdminToggleUserActiveView(APIView):
         })
 
 
+class AdminVerifyUserView(APIView):
+    """Admin: manually verify a user's email"""
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        target_user.is_verified = True
+        target_user.save()
+        return Response({
+            'message': 'User verified successfully',
+            'is_verified': True,
+            'user': AdminUserSerializer(target_user).data,
+        })
+
+
+class AdminToggleProView(APIView):
+    """Admin: toggle Pro status for a user"""
+    permission_classes = [IsAdminUser]
+
+    def post(self, request, user_id):
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        from django.utils import timezone
+        target_user.is_pro = not target_user.is_pro
+        target_user.pro_since = timezone.now() if target_user.is_pro else None
+        target_user.save()
+        return Response({
+            'message': f'User {"upgraded to Pro" if target_user.is_pro else "downgraded to Free"}',
+            'is_pro': target_user.is_pro,
+            'user': AdminUserSerializer(target_user).data,
+        })
+
+
 class AdminStatsView(APIView):
     """Admin: platform-wide statistics"""
     permission_classes = [IsAdminUser]
@@ -333,3 +374,101 @@ class AdminStatsView(APIView):
             'total_expenses': float(total_expenses),
             'monthly_registrations': monthly_data,
         })
+
+
+class MakeAdminView(APIView):
+    """One-time setup: make a user admin using setup key"""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        setup_key = request.data.get('setup_key', '')
+        user_id   = request.data.get('user_id', '')
+        if setup_key != 'riphah-fyp-setup-2026':
+            return Response({'error': 'Invalid setup key'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            u = User.objects.get(id=user_id)
+            u.is_staff = True
+            u.is_superuser = True
+            u.is_verified = True
+            u.save()
+            return Response({'success': True, 'user': u.email, 'is_staff': u.is_staff})
+        except User.DoesNotExist:
+            return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class GoogleAuthView(APIView):
+    """Sign in / sign up with Google via Firebase ID token"""
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        id_token    = request.data.get('id_token', '').strip()
+        display_name = request.data.get('display_name', '')
+        photo_url   = request.data.get('photo_url', '')
+
+        if not id_token:
+            return Response({'error': 'id_token is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        firebase_api_key = getattr(settings, 'FIREBASE_API_KEY', '')
+        if not firebase_api_key:
+            return Response({'error': 'Firebase not configured on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        # Verify token with Firebase Identity Toolkit (no firebase-admin needed)
+        resp = http_requests.post(
+            f'https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}',
+            json={'idToken': id_token},
+            timeout=10,
+        )
+
+        if resp.status_code != 200:
+            return Response({'error': 'Invalid Google token'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        data = resp.json()
+        if not data.get('users'):
+            return Response({'error': 'User not found in Firebase'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        firebase_user = data['users'][0]
+        email = firebase_user.get('email', '')
+        if not email:
+            return Response({'error': 'Email not provided by Google'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Parse name from displayName or photo URL
+        name_parts = (display_name or firebase_user.get('displayName', '')).split(' ', 1)
+        first_name = name_parts[0] if name_parts else ''
+        last_name  = name_parts[1] if len(name_parts) > 1 else ''
+
+        # Get or create Django user
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={
+                'first_name':  first_name,
+                'last_name':   last_name,
+                'is_verified': True,
+                'is_active':   True,
+            }
+        )
+
+        # Update name/photo if returning user and fields are empty
+        if not created:
+            updated = False
+            if not user.first_name and first_name:
+                user.first_name = first_name
+                updated = True
+            if not user.last_name and last_name:
+                user.last_name = last_name
+                updated = True
+            if updated:
+                user.save()
+
+        # Generate Django JWT tokens
+        refresh = RefreshToken.for_user(user)
+        refresh['email']     = user.email
+        refresh['full_name'] = user.full_name
+
+        return Response({
+            'user': UserSerializer(user).data,
+            'tokens': {
+                'access':  str(refresh.access_token),
+                'refresh': str(refresh),
+            },
+            'created': created,
+        }, status=status.HTTP_200_OK)

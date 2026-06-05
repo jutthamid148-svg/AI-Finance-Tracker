@@ -8,6 +8,7 @@ import datetime
 
 from .models import Income, Expense
 from .serializers import IncomeSerializer, ExpenseSerializer
+from users.models import Notification
 
 
 class IncomeListCreateView(generics.ListCreateAPIView):
@@ -44,6 +45,30 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
     filterset_fields = ['category', 'date']
     search_fields = ['description', 'category']
     ordering_fields = ['amount', 'date', 'created_at']
+
+    def perform_create(self, serializer):
+        expense = serializer.save()
+        # Check if this expense pushes any budget over the limit
+        try:
+            from budgets.models import Budget
+            budget = Budget.objects.filter(
+                user=self.request.user,
+                category=expense.category,
+                month=expense.date.month,
+                year=expense.date.year,
+            ).first()
+            if budget and budget.is_exceeded:
+                Notification.objects.get_or_create(
+                    user=self.request.user,
+                    notification_type='budget_exceeded',
+                    is_read=False,
+                    defaults={
+                        'title': f'Budget Exceeded: {expense.category.title()}',
+                        'message': f'You have exceeded your {expense.category} budget for this month.',
+                    }
+                )
+        except Exception:
+            pass
 
     def get_queryset(self):
         qs = Expense.objects.filter(user=self.request.user)

@@ -52,6 +52,7 @@ class FullInsightsView(APIView):
             'recommendations': analyzer.generate_recommendations(),
             'predictions': analyzer.predict_next_month_expenses(),
             'savings_predictions': analyzer.predict_savings(),
+            'health_score': analyzer.get_financial_health_score(),
         })
 
 

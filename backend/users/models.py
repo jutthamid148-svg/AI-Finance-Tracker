@@ -31,6 +31,8 @@ class User(AbstractBaseUser, PermissionsMixin):
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
+    is_pro = models.BooleanField(default=False)
+    pro_since = models.DateTimeField(null=True, blank=True)
     email_verification_token = models.UUIDField(default=uuid.uuid4)
     password_reset_token = models.UUIDField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

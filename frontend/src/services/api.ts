@@ -77,6 +77,7 @@ export const authAPI = {
   dashboardStats: () => api.get('/auth/dashboard/stats/'),
   notifications: () => api.get('/auth/notifications/'),
   markAllRead: () => api.post('/auth/notifications/mark-read/'),
+  markOneRead: (id: string) => api.post(`/auth/notifications/${id}/mark-read/`),
 }
 
 // Transaction endpoints
@@ -137,6 +138,8 @@ export const adminAPI = {
   stats: () => api.get('/auth/admin/stats/'),
   users: (params?: any) => api.get('/auth/admin/users/', { params }),
   toggleActive: (userId: string) => api.post(`/auth/admin/users/${userId}/toggle-active/`),
+  verifyUser:   (userId: string) => api.post(`/auth/admin/users/${userId}/verify/`),
+  togglePro:    (userId: string) => api.post(`/auth/admin/users/${userId}/toggle-pro/`),
 }
 
 export default api

@@ -18,6 +18,9 @@ import ReportsPage from './pages/reports/ReportsPage'
 import ProfilePage from './pages/profile/ProfilePage'
 import DashboardLayout from './components/layout/DashboardLayout'
 import AdminPanel from './pages/admin/AdminPanel'
+import PricingPage from './pages/PricingPage'
+import TermsPage from './pages/TermsPage'
+import PrivacyPage from './pages/PrivacyPage'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuthStore()
@@ -30,9 +33,15 @@ function PublicRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AdminRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, user } = useAuthStore()
+  const { isAuthenticated, user, isLoading } = useAuthStore()
   if (!isAuthenticated) return <Navigate to="/login" replace />
-  if (!user?.is_staff) return <Navigate to="/dashboard" replace />
+  // Wait for profile to load before checking is_staff
+  if (isLoading || user === null) return (
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#060d18' }}>
+      <div className="spinner" />
+    </div>
+  )
+  if (!user.is_staff || user.email !== 'jutthamid148@gmail.com') return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
@@ -62,6 +71,9 @@ function App() {
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/login" element={<PublicRoute><LoginPage /></PublicRoute>} />
         <Route path="/register" element={<PublicRoute><RegisterPage /></PublicRoute>} />
         <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />

@@ -1,0 +1,12 @@
+User-agent: *
+Allow: /
+Allow: /pricing
+Allow: /terms
+Allow: /privacy
+
+Disallow: /dashboard
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://frontend-iota-ten-12.vercel.app/sitemap.xml

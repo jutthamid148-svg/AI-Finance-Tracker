@@ -4,10 +4,125 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   LayoutDashboard, TrendingUp, TrendingDown, PieChart,
   Target, Brain, FileText, User, LogOut, Menu, X,
-  Bell, Wallet, ChevronRight, Shield,
+  Bell, Wallet, ChevronRight, Shield, AlertTriangle,
+  Trophy, Info, CheckCheck, Clock,
 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { authAPI } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
+
+const TYPE_ICON: Record<string, { icon: any; color: string; bg: string }> = {
+  budget_exceeded: { icon: AlertTriangle, color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
+  goal_reached:    { icon: Trophy,        color: '#F59E0B', bg: 'rgba(245,158,11,0.12)' },
+  overspending:    { icon: TrendingDown,  color: '#F97316', bg: 'rgba(249,115,22,0.12)' },
+  report_ready:    { icon: FileText,      color: '#6366F1', bg: 'rgba(99,102,241,0.12)' },
+  info:            { icon: Info,          color: '#06B6D4', bg: 'rgba(6,182,212,0.12)'  },
+}
+
+function timeAgo(dateStr: string) {
+  const diff = Date.now() - new Date(dateStr).getTime()
+  const mins = Math.floor(diff / 60000)
+  if (mins < 1) return 'Just now'
+  if (mins < 60) return `${mins}m ago`
+  const hrs = Math.floor(mins / 60)
+  if (hrs < 24) return `${hrs}h ago`
+  return `${Math.floor(hrs / 24)}d ago`
+}
+
+function NotificationPanel({ onClose: _onClose }: { onClose: () => void }) {
+  const qc = useQueryClient()
+
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => authAPI.notifications().then(r => r.data.results || r.data),
+    refetchInterval: 30000,
+  })
+
+  const markOneMutation = useMutation({
+    mutationFn: (id: string) => authAPI.markOneRead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['notifications'] }),
+  })
+
+  const markAllMutation = useMutation({
+    mutationFn: () => authAPI.markAllRead(),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('All notifications marked as read')
+    },
+  })
+
+  const unread = (notifications as any[]).filter((n: any) => !n.is_read).length
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -8, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+      transition={{ duration: 0.18 }}
+      className="absolute right-0 top-full mt-2 w-80 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 overflow-hidden z-50"
+      style={{ background: '#0d1829' }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+        <div className="flex items-center gap-2">
+          <Bell size={14} className="text-primary" />
+          <span className="font-semibold text-sm text-white">Notifications</span>
+          {unread > 0 && (
+            <span className="bg-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{unread}</span>
+          )}
+        </div>
+        {unread > 0 && (
+          <button
+            onClick={() => markAllMutation.mutate()}
+            disabled={markAllMutation.isPending}
+            className="flex items-center gap-1 text-[11px] text-white/40 hover:text-primary transition-colors"
+          >
+            <CheckCheck size={12} /> Mark all read
+          </button>
+        )}
+      </div>
+
+      {/* List */}
+      <div className="max-h-80 overflow-y-auto">
+        {isLoading ? (
+          <div className="flex justify-center py-8"><div className="spinner" /></div>
+        ) : (notifications as any[]).length === 0 ? (
+          <div className="flex flex-col items-center py-10 gap-2">
+            <Bell size={28} className="text-white/15" />
+            <p className="text-white/30 text-sm">No notifications yet</p>
+          </div>
+        ) : (
+          (notifications as any[]).map((n: any) => {
+            const meta = TYPE_ICON[n.notification_type] || TYPE_ICON.info
+            const Icon = meta.icon
+            return (
+              <div
+                key={n.id}
+                onClick={() => !n.is_read && markOneMutation.mutate(n.id)}
+                className={`flex gap-3 px-4 py-3 border-b border-white/5 cursor-pointer transition-colors hover:bg-white/5 ${!n.is_read ? 'bg-white/[0.03]' : ''}`}
+              >
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: meta.bg }}>
+                  <Icon size={14} style={{ color: meta.color }} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <p className={`text-xs font-semibold leading-snug ${n.is_read ? 'text-white/50' : 'text-white'}`}>{n.title}</p>
+                    {!n.is_read && <div className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0 mt-1" />}
+                  </div>
+                  <p className="text-[11px] text-white/35 mt-0.5 leading-snug line-clamp-2">{n.message}</p>
+                  <div className="flex items-center gap-1 mt-1 text-white/25 text-[10px]">
+                    <Clock size={9} />{timeAgo(n.created_at)}
+                  </div>
+                </div>
+              </div>
+            )
+          })
+        )}
+      </div>
+    </motion.div>
+  )
+}
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true, color: '#6366F1' },
@@ -126,6 +241,15 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
 export default function DashboardLayout() {
   const { user } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [notifOpen, setNotifOpen] = useState(false)
+
+  const { data: notifications = [] } = useQuery({
+    queryKey: ['notifications'],
+    queryFn: () => authAPI.notifications().then(r => r.data.results || r.data),
+    refetchInterval: 60000,
+    enabled: !!user,
+  })
+  const unreadCount = (notifications as any[]).filter((n: any) => !n.is_read).length
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#070e1a' }}>
@@ -188,10 +312,29 @@ export default function DashboardLayout() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 ml-auto">
-            <button className="relative p-2 rounded-lg hover:bg-white/6 transition-colors group">
-              <Bell size={16} className="text-white/45 group-hover:text-white/70 transition-colors" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full" />
-            </button>
+            <div className="relative">
+              <button
+                onClick={() => setNotifOpen(o => !o)}
+                className="relative p-2 rounded-lg hover:bg-white/6 transition-colors group"
+              >
+                <Bell size={16} className={`transition-colors ${notifOpen ? 'text-primary' : 'text-white/45 group-hover:text-white/70'}`} />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center px-1">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              <AnimatePresence>
+                {notifOpen && (
+                  <>
+                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
+                    <div className="relative z-50">
+                      <NotificationPanel onClose={() => setNotifOpen(false)} />
+                    </div>
+                  </>
+                )}
+              </AnimatePresence>
+            </div>
             <NavLink
               to="/dashboard/profile"
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"

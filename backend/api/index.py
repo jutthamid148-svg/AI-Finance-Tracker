@@ -17,41 +17,48 @@ CORS_HEADERS = [
 ]
 
 _init_error = None
-_django_app = None
+_django_app  = None
 
+# Step 1: Django setup
 try:
     import django
     django.setup()
-
-    try:
-        from django.core.management import call_command
-        call_command('migrate', '--run-syncdb', verbosity=0, interactive=False)
-    except Exception:
-        pass
-
-    from django.core.wsgi import get_wsgi_application
-    _django_app = get_wsgi_application()
-
 except Exception:
     _init_error = traceback.format_exc()
 
+# Step 2: Run migrations (non-fatal — ignore if tables already exist)
+if _init_error is None:
+    try:
+        from django.core.management import call_command
+        call_command('migrate', verbosity=0, interactive=False)
+    except Exception:
+        pass  # Duplicate key / already migrated — safe to ignore
+
+# Step 3: Build WSGI app
+if _init_error is None:
+    try:
+        from django.core.wsgi import get_wsgi_application
+        _django_app = get_wsgi_application()
+    except Exception:
+        _init_error = traceback.format_exc()
+
 
 def app(environ, start_response):
-    # OPTIONS preflight — always allow
+    # Preflight
     if environ.get('REQUEST_METHOD') == 'OPTIONS':
         start_response('200 OK', CORS_HEADERS + [('Content-Length', '0')])
         return [b'']
 
-    # If Django failed to start — return the error as JSON
+    # Init failed
     if _django_app is None:
-        body = json.dumps({'error': _init_error or 'Django failed to initialize'}).encode()
+        body = json.dumps({'error': _init_error}).encode()
         start_response('500 Internal Server Error', CORS_HEADERS + [
             ('Content-Type', 'application/json'),
             ('Content-Length', str(len(body))),
         ])
         return [body]
 
-    # Normal request — inject CORS headers
+    # Inject CORS into every response
     def cors_start_response(status, headers, exc_info=None):
         clean = [(k, v) for k, v in headers
                  if not k.lower().startswith('access-control-')]

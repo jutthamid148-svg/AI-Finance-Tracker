@@ -16,7 +16,7 @@ import {
 import {
   authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI
 } from '../../services/api'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 
@@ -193,6 +193,7 @@ function HealthScore({ income, expenses, budgetRate }: { income: number; expense
 // ── Main Component ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user } = useAuthStore()
+  const navigate = useNavigate()
   const [quickAdd, setQuickAdd] = useState<'income' | 'expense' | null>(null)
 
   const { data: stats } = useQuery({
@@ -302,9 +303,9 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ── Admin Panel Banner (staff only) ── */}
-      {user?.is_staff && (
-        <motion.a
-          href="/admin"
+      {user?.is_staff && user?.email === 'jutthamid148@gmail.com' && (
+        <motion.div
+          onClick={() => navigate('/admin')}
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.05 }}
@@ -326,7 +327,7 @@ export default function DashboardPage() {
             <span className="badge badge-primary text-[10px] py-0.5">Staff Access</span>
             <ArrowUpRight size={16} className="text-primary group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
           </div>
-        </motion.a>
+        </motion.div>
       )}
 
       {/* ── Stat Cards ── */}

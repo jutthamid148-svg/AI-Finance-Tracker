@@ -8,9 +8,9 @@ import {
 import {
   Users, UserCheck, UserX, Shield, TrendingUp, TrendingDown,
   Search, ToggleLeft, ToggleRight, RefreshCw, LogOut,
-  Activity, DollarSign, UserPlus, AlertCircle, X, ChevronDown
+  Activity, DollarSign, UserPlus, AlertCircle, X, ChevronDown, Crown
 } from 'lucide-react'
-import { adminAPI, authAPI } from '../../services/api'
+import { adminAPI } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import { useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
@@ -119,13 +119,34 @@ export default function AdminPanel() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       queryClient.invalidateQueries({ queryKey: ['admin-stats'] })
-      const action = data.data.is_active ? 'activated' : 'deactivated'
-      toast.success(`User ${action} successfully`)
+      toast.success(`User ${data.data.is_active ? 'activated' : 'deactivated'} successfully`)
       setConfirmUser(null)
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.error || 'Action failed')
       setConfirmUser(null)
+    },
+  })
+
+  const verifyMutation = useMutation({
+    mutationFn: (userId: string) => adminAPI.verifyUser(userId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success('User verified successfully ✅')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Verify failed')
+    },
+  })
+
+  const proMutation = useMutation({
+    mutationFn: (userId: string) => adminAPI.togglePro(userId),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      toast.success(data.data.is_pro ? '⭐ User upgraded to Pro!' : 'User downgraded to Free')
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error || 'Action failed')
     },
   })
 
@@ -364,6 +385,11 @@ export default function AdminPanel() {
                         {u.is_staff && (
                           <span className="badge badge-primary text-[10px] py-0.5 px-2">Admin</span>
                         )}
+                        {u.is_pro && (
+                          <span className="badge text-[10px] py-0.5 px-2 flex items-center gap-1" style={{ background: 'rgba(245,158,11,0.15)', color: '#F59E0B', border: '1px solid rgba(245,158,11,0.3)' }}>
+                            <Crown size={9} /> Pro
+                          </span>
+                        )}
                         {!u.is_verified && (
                           <span className="badge badge-warning text-[10px] py-0.5 px-2">Unverified</span>
                         )}
@@ -394,6 +420,32 @@ export default function AdminPanel() {
                         />
                       </button>
 
+                      {/* Verify button — only for unverified non-admin users */}
+                      {!u.is_verified && !u.is_staff && (
+                        <button
+                          onClick={() => verifyMutation.mutate(u.id)}
+                          disabled={verifyMutation.isPending}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all bg-primary/10 text-primary hover:bg-primary/20 border border-primary/25"
+                        >
+                          <UserCheck size={13} /> Verify
+                        </button>
+                      )}
+
+                      {/* Pro toggle — non-admin users only */}
+                      {!u.is_staff && (
+                        <button
+                          onClick={() => proMutation.mutate(u.id)}
+                          disabled={proMutation.isPending}
+                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${u.is_pro
+                            ? 'bg-warning/10 text-warning hover:bg-warning/20 border border-warning/25'
+                            : 'bg-white/5 text-white/40 hover:bg-white/10 border border-white/10'
+                          }`}
+                        >
+                          <Crown size={12} />{u.is_pro ? 'Pro' : 'Free'}
+                        </button>
+                      )}
+
+                      {/* Toggle Active/Inactive — non-admin users only */}
                       {!u.is_staff && (
                         <button
                           onClick={() => setConfirmUser(u)}

@@ -29,9 +29,9 @@ class UserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'full_name',
-            'avatar', 'phone', 'currency', 'is_verified', 'is_staff', 'created_at'
+            'avatar', 'phone', 'currency', 'is_verified', 'is_staff', 'is_pro', 'pro_since', 'created_at'
         ]
-        read_only_fields = ['id', 'email', 'is_verified', 'is_staff', 'created_at']
+        read_only_fields = ['id', 'email', 'is_verified', 'is_staff', 'is_pro', 'pro_since', 'created_at']
 
 
 class UserUpdateSerializer(serializers.ModelSerializer):
@@ -76,7 +76,7 @@ class AdminUserSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'email', 'first_name', 'last_name', 'full_name',
-            'phone', 'currency', 'is_active', 'is_staff', 'is_verified',
+            'phone', 'currency', 'is_active', 'is_staff', 'is_verified', 'is_pro',
             'created_at', 'total_expenses', 'total_income',
         ]
         read_only_fields = ['id', 'email', 'created_at']

@@ -11,6 +11,7 @@ load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-change-this-in-production-xyz123')
+FIREBASE_API_KEY = os.getenv('FIREBASE_API_KEY', '')
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
@@ -76,26 +77,43 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'finance_tracker.wsgi.application'
 
-# Database — Vercel uses SQLite in /tmp, local dev uses PostgreSQL
-_is_vercel = os.getenv('VERCEL', '') == '1'
-_use_sqlite = os.getenv('USE_SQLITE', 'False') == 'True'
+# Database
+_database_url = os.getenv('DATABASE_URL', '')
+_use_sqlite   = os.getenv('USE_SQLITE', 'False') == 'True'
 
-if _is_vercel or _use_sqlite:
+if _database_url:
+    # Parse postgresql://user:pass@host:port/dbname
+    import urllib.parse as _urlparse
+    _u = _urlparse.urlparse(_database_url)
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': '/tmp/db.sqlite3' if _is_vercel else BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME':     _u.path.lstrip('/'),
+            'USER':     _urlparse.unquote(_u.username or ''),
+            'PASSWORD': _urlparse.unquote(_u.password or ''),
+            'HOST':     _u.hostname,
+            'PORT':     str(_u.port or 5432),
+            'OPTIONS':  {'sslmode': 'require'},
+        }
+    }
+elif not _use_sqlite and os.getenv('DB_HOST', ''):
+    # Individual env vars
+    DATABASES = {
+        'default': {
+            'ENGINE':   'django.db.backends.postgresql',
+            'NAME':     os.getenv('DB_NAME', 'postgres'),
+            'USER':     os.getenv('DB_USER', 'postgres'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST':     os.getenv('DB_HOST'),
+            'PORT':     os.getenv('DB_PORT', '5432'),
+            'OPTIONS':  {'sslmode': 'require'},
         }
     }
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('DB_NAME', 'ai_finance_tracker'),
-            'USER': os.getenv('DB_USER', 'postgres'),
-            'PASSWORD': os.getenv('DB_PASSWORD', 'postgres'),
-            'HOST': os.getenv('DB_HOST', 'localhost'),
-            'PORT': os.getenv('DB_PORT', '5432'),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3' if _use_sqlite else '/tmp/db.sqlite3',
         }
     }
 
@@ -111,7 +129,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'finance_tracker.authentication.ActiveUserJWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
@@ -169,7 +187,7 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = '/tmp/media' if _is_vercel else BASE_DIR / 'media'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 

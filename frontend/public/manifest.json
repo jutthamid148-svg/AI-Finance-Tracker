@@ -1,0 +1,38 @@
+{
+  "name": "AI Finance Tracker",
+  "short_name": "AI Finance",
+  "description": "AI-powered personal finance management. Track income, expenses, budgets and get smart insights.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#060d18",
+  "theme_color": "#6366F1",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["finance", "productivity"],
+  "icons": [
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Go to your finance dashboard"
+    },
+    {
+      "name": "Add Expense",
+      "url": "/dashboard/expenses",
+      "description": "Add a new expense"
+    },
+    {
+      "name": "AI Insights",
+      "url": "/dashboard/ai-insights",
+      "description": "View AI financial insights"
+    }
+  ]
+}
