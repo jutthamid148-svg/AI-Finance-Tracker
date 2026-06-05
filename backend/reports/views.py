@@ -8,8 +8,6 @@ from django.db.models import Sum
 import io
 
 from transactions.models import Income, Expense
-from budgets.models import Budget
-from savings.models import SavingsGoal
 
 
 class MonthlyReportView(APIView):
@@ -32,9 +30,10 @@ class MonthlyReportView(APIView):
         total_income = float(income_data.aggregate(t=Sum('amount'))['t'] or 0)
         total_expenses = float(expense_data.aggregate(t=Sum('amount'))['t'] or 0)
 
+        # .order_by() clears Meta.ordering so PostgreSQL GROUP BY only uses 'category'
         cat_totals = {
             row['category']: float(row['t'])
-            for row in expense_data.values('category').annotate(t=Sum('amount'))
+            for row in expense_data.order_by().values('category').annotate(t=Sum('amount'))
         }
         category_breakdown = [
             {'category': cat, 'amount': cat_totals[cat]}
@@ -128,7 +127,7 @@ class ExportPDFView(APIView):
         expenses = Expense.objects.filter(user=user, date__month=month, date__year=year)
         cat_totals = {
             row['category']: float(row['t'])
-            for row in expenses.values('category').annotate(t=Sum('amount'))
+            for row in expenses.order_by().values('category').annotate(t=Sum('amount'))
         }
         cat_data = [['Category', 'Amount (PKR)', '% of Total']]
         for cat in ['food', 'transport', 'shopping', 'bills', 'health', 'education', 'entertainment', 'other']:

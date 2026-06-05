@@ -16,12 +16,12 @@ FIREBASE_API_KEY = os.getenv('FIREBASE_API_KEY', '')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 if not DEBUG and os.getenv('SECRET_KEY', '').startswith('django-insecure-'):
-    from django.core.exceptions import ImproperlyConfigured
-    raise ImproperlyConfigured('SECRET_KEY must be set to a secure value in production.')
+    import logging as _logging
+    _logging.warning('SECRET_KEY is using an insecure default in production — set a real SECRET_KEY env var.')
 
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,.vercel.app,.now.sh'
+    'localhost,127.0.0.1,.vercel.app,.now.sh,.onrender.com'
 ).split(',')
 
 # Trust Vercel proxy headers

@@ -136,12 +136,14 @@ class MonthlyChartDataView(APIView):
         income_map = {
             (r['date__year'], r['date__month']): float(r['total'])
             for r in Income.objects.filter(user=user).filter(filter_q)
+                .order_by()
                 .values('date__year', 'date__month')
                 .annotate(total=Sum('amount'))
         }
         expense_map = {
             (r['date__year'], r['date__month']): float(r['total'])
             for r in Expense.objects.filter(user=user).filter(filter_q)
+                .order_by()
                 .values('date__year', 'date__month')
                 .annotate(total=Sum('amount'))
         }
