@@ -11,7 +11,8 @@ import {
   TrendingUp, TrendingDown, Wallet, Target, Brain,
   ArrowUpRight, ArrowDownRight, Plus, X, Zap,
   CheckCircle2, Clock, Activity, Shield,
-  DollarSign, BarChart2, Sparkles,
+  DollarSign, BarChart2, Sparkles, Bell, BellOff,
+  CalendarDays, Flame, AlertTriangle,
 } from 'lucide-react'
 import {
   authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI
@@ -236,6 +237,15 @@ export default function DashboardPage() {
     queryKey: ['ai-insights-quick'],
     queryFn: () => aiAPI.spendingAnalysis().then(r => r.data),
   })
+  const { data: notifications, refetch: refetchNotifs } = useQuery({
+    queryKey: ['dashboard-notifications'],
+    queryFn: () => authAPI.notifications().then(r => r.data),
+    refetchInterval: 60_000,
+  })
+  const markAllReadMutation = useMutation({
+    mutationFn: () => authAPI.markAllRead(),
+    onSuccess: () => refetchNotifs(),
+  })
 
   // Merge & sort recent transactions
   const recentTxns = [
@@ -303,7 +313,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* ── Admin Panel Banner (staff only) ── */}
-      {user?.is_staff && user?.email === 'jutthamid148@gmail.com' && (
+      {user?.is_staff && (
         <motion.div
           onClick={() => navigate('/admin')}
           initial={{ opacity: 0, y: -8 }}
@@ -756,6 +766,169 @@ export default function DashboardPage() {
                       <p className="text-[10px] text-white/25 mt-0.5">Target: {g.target_date}</p>
                     )}
                   </div>
+                )
+              })}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* ── Spending Pace + Notifications ── */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
+
+        {/* Spending Pace Card */}
+        {(() => {
+          const now = new Date()
+          const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
+          const daysPassed = now.getDate()
+          const daysLeft = totalDays - daysPassed
+          const dailyAvg = daysPassed > 0 ? (stats?.monthly_expenses || 0) / daysPassed : 0
+          const projected = dailyAvg * totalDays
+          const budget = budgetSummary?.total_budget || 0
+          const onTrack = budget > 0 ? projected <= budget : true
+          const paceColor = onTrack ? '#10B981' : '#EF4444'
+          const monthProgress = Math.round((daysPassed / totalDays) * 100)
+          const spendProgress = budget > 0 ? Math.min(Math.round(((stats?.monthly_expenses || 0) / budget) * 100), 100) : 0
+          return (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48 }}
+              className="card">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 bg-gradient-to-br from-warning to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-warning/25">
+                    <Flame size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-sm">Spending Pace</h2>
+                    <p className="text-white/35 text-xs">{daysLeft} days left this month</p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
+                  style={{ background: onTrack ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: paceColor }}>
+                  {onTrack ? '✓ On Track' : '⚠ Over Pace'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="glass p-3 rounded-xl">
+                  <p className="text-white/35 text-[10px] mb-1">Daily Average</p>
+                  <p className="text-base font-black">₨{Math.round(dailyAvg).toLocaleString()}</p>
+                  <p className="text-white/30 text-[10px]">per day so far</p>
+                </div>
+                <div className="glass p-3 rounded-xl">
+                  <p className="text-white/35 text-[10px] mb-1">Projected Total</p>
+                  <p className="text-base font-black" style={{ color: paceColor }}>₨{Math.round(projected).toLocaleString()}</p>
+                  <p className="text-white/30 text-[10px]">by month end</p>
+                </div>
+              </div>
+
+              {/* Month timeline */}
+              <div className="space-y-2.5">
+                <div>
+                  <div className="flex justify-between text-[10px] text-white/35 mb-1">
+                    <span className="flex items-center gap-1"><CalendarDays size={10} /> Month Progress</span>
+                    <span>{daysPassed}/{totalDays} days ({monthProgress}%)</span>
+                  </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                    <div className="h-full bg-white/20 rounded-full transition-all" style={{ width: `${monthProgress}%` }} />
+                  </div>
+                </div>
+                {budget > 0 && (
+                  <div>
+                    <div className="flex justify-between text-[10px] text-white/35 mb-1">
+                      <span>Budget Used</span>
+                      <span style={{ color: paceColor }}>
+                        ₨{Number(stats?.monthly_expenses || 0).toLocaleString()} / ₨{Number(budget).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }} animate={{ width: `${spendProgress}%` }}
+                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                        className="h-full rounded-full"
+                        style={{ background: paceColor }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )
+        })()}
+
+        {/* Notifications Panel */}
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}
+          className="card">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="relative">
+                <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
+                  <Bell size={16} className="text-white" />
+                </div>
+                {(notifications?.filter((n: any) => !n.is_read)?.length || 0) > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4.5 h-4 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none px-1">
+                    {notifications.filter((n: any) => !n.is_read).length}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h2 className="font-bold text-sm">Notifications</h2>
+                <p className="text-white/35 text-xs">Alerts & reminders</p>
+              </div>
+            </div>
+            {notifications?.some((n: any) => !n.is_read) && (
+              <button
+                onClick={() => markAllReadMutation.mutate()}
+                disabled={markAllReadMutation.isPending}
+                className="text-[10px] text-primary hover:text-secondary transition-colors font-medium"
+              >
+                Mark all read
+              </button>
+            )}
+          </div>
+
+          {!notifications || notifications.length === 0 ? (
+            <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2">
+              <BellOff size={24} />
+              <p className="text-xs">No notifications yet</p>
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-52 overflow-y-auto pr-1 custom-scrollbar">
+              {notifications.slice(0, 6).map((n: any, i: number) => {
+                const typeColors: Record<string, string> = {
+                  budget_exceeded: '#EF4444',
+                  goal_completed: '#10B981',
+                  info: '#6366F1',
+                }
+                const typeIcons: Record<string, any> = {
+                  budget_exceeded: AlertTriangle,
+                  goal_completed: CheckCircle2,
+                  info: Bell,
+                }
+                const IconComp = typeIcons[n.notification_type] || Bell
+                const color = typeColors[n.notification_type] || '#6366F1'
+                return (
+                  <motion.div
+                    key={n.id}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    className={`flex items-start gap-3 p-2.5 rounded-xl transition-colors border ${n.is_read ? 'border-transparent opacity-50' : 'border-white/6 bg-white/[0.025]'}`}
+                  >
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
+                      style={{ background: color + '20' }}>
+                      <IconComp size={13} style={{ color }} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-semibold text-white/80 leading-tight">{n.title}</p>
+                      <p className="text-[10px] text-white/40 mt-0.5 leading-relaxed">{n.message}</p>
+                      <p className="text-[9px] text-white/20 mt-1">
+                        {new Date(n.created_at).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {!n.is_read && (
+                      <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />
+                    )}
+                  </motion.div>
                 )
               })}
             </div>
