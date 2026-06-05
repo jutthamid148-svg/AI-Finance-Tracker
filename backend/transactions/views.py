@@ -108,9 +108,11 @@ class MonthlyChartDataView(APIView):
         months_data = []
 
         for i in range(5, -1, -1):
-            d = today.replace(day=1) - datetime.timedelta(days=i * 28)
-            month = d.month
-            year = d.year
+            # Step back i calendar months from the current month (not 28-day steps)
+            month = today.month - i
+            year = today.year + (month - 1) // 12
+            month = ((month - 1) % 12) + 1
+            d = today.replace(year=year, month=month, day=1)
             month_name = d.strftime('%b %Y')
 
             income_total = Income.objects.filter(

@@ -60,8 +60,11 @@ class ActiveUserTokenRefreshView(TokenRefreshView):
                             {'detail': 'User account has been deactivated'},
                             status=status.HTTP_401_UNAUTHORIZED
                         )
-            except Exception:
-                pass
+            except (TokenError, Exception):
+                return Response(
+                    {'detail': 'Token is invalid or expired'},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
 
         return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
@@ -151,7 +154,9 @@ class ForgotPasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             user = User.objects.get(email=serializer.validated_data['email'])
+            from django.utils import timezone
             user.password_reset_token = uuid.uuid4()
+            user.password_reset_created_at = timezone.now()
             user.save()
             send_mail(
                 subject='Reset Your AI Finance Tracker Password',
@@ -173,8 +178,14 @@ class ResetPasswordView(APIView):
         serializer.is_valid(raise_exception=True)
         try:
             user = User.objects.get(password_reset_token=serializer.validated_data['token'])
+            from django.utils import timezone
+            from datetime import timedelta
+            if not user.password_reset_created_at or \
+               timezone.now() - user.password_reset_created_at > timedelta(hours=1):
+                return Response({'error': 'Reset link has expired. Please request a new one.'}, status=status.HTTP_400_BAD_REQUEST)
             user.set_password(serializer.validated_data['new_password'])
             user.password_reset_token = None
+            user.password_reset_created_at = None
             user.save()
             return Response({'message': 'Password reset successfully'})
         except User.DoesNotExist:

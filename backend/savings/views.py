@@ -46,7 +46,7 @@ class AddToSavingsView(APIView):
             if amount <= 0:
                 return Response({'error': 'Amount must be positive'}, status=status.HTTP_400_BAD_REQUEST)
 
-            goal.current_amount = float(goal.current_amount) + amount
+            goal.current_amount = min(float(goal.current_amount) + amount, float(goal.target_amount))
             if float(goal.current_amount) >= float(goal.target_amount):
                 goal.is_completed = True
                 goal.completed_at = timezone.now()

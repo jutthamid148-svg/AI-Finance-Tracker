@@ -35,6 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin):
     pro_since = models.DateTimeField(null=True, blank=True)
     email_verification_token = models.UUIDField(default=uuid.uuid4)
     password_reset_token = models.UUIDField(null=True, blank=True)
+    password_reset_created_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

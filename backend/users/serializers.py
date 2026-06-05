@@ -39,6 +39,13 @@ class UserUpdateSerializer(serializers.ModelSerializer):
         model = User
         fields = ['first_name', 'last_name', 'phone', 'currency', 'avatar']
 
+    def validate_avatar(self, value):
+        if value and len(value) > 3_500_000:
+            raise serializers.ValidationError('Image too large. Maximum size is 2MB.')
+        if value and not value.startswith('data:image/'):
+            raise serializers.ValidationError('Invalid image format.')
+        return value
+
 
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)

@@ -8,6 +8,9 @@ const api = axios.create({
   timeout: 30000,   // 30s — Vercel cold start ke liye
 })
 
+// Single in-flight refresh promise — prevents N concurrent 401s from spawning N refresh calls
+let _refreshPromise: Promise<string> | null = null
+
 // Request interceptor — attach JWT token
 api.interceptors.request.use(
   (config) => {
@@ -34,22 +37,26 @@ api.interceptors.response.use(
       return Promise.reject(networkErr)
     }
 
-    // 401 — token expired, try refresh
+    // 401 — token expired, try refresh (with in-flight dedup lock)
     if (error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
       const refreshToken = localStorage.getItem('refresh_token')
 
       if (refreshToken) {
         try {
-          const { data } = await axios.post(
-            `${API_BASE_URL}/auth/token/refresh/`,
-            { refresh: refreshToken },
-            { timeout: 15000 }
-          )
-          localStorage.setItem('access_token', data.access)
-          originalRequest.headers.Authorization = `Bearer ${data.access}`
+          if (!_refreshPromise) {
+            _refreshPromise = axios.post(
+              `${API_BASE_URL}/auth/token/refresh/`,
+              { refresh: refreshToken },
+              { timeout: 15000 }
+            ).then(r => r.data.access).finally(() => { _refreshPromise = null })
+          }
+          const newAccessToken = await _refreshPromise
+          localStorage.setItem('access_token', newAccessToken)
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`
           return api(originalRequest)
         } catch {
+          _refreshPromise = null
           localStorage.clear()
           window.location.href = '/login'
         }
