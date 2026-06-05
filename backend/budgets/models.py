@@ -1,5 +1,7 @@
 from django.db import models
 from django.conf import settings
+from django.core.validators import MinValueValidator, MaxValueValidator
+from decimal import Decimal
 import uuid
 
 
@@ -18,9 +20,9 @@ class Budget(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='budgets')
     category = models.CharField(max_length=50, choices=CATEGORIES)
-    amount = models.DecimalField(max_digits=12, decimal_places=2)
-    month = models.IntegerField()
-    year = models.IntegerField()
+    amount = models.DecimalField(max_digits=12, decimal_places=2, validators=[MinValueValidator(Decimal('0.01'))])
+    month = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(12)])
+    year = models.IntegerField(validators=[MinValueValidator(2000), MaxValueValidator(2100)])
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

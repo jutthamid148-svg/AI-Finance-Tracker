@@ -433,7 +433,10 @@ class GoogleAuthView(APIView):
         if not firebase_api_key:
             return Response({'error': 'Firebase not configured on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        # Verify token with Firebase Identity Toolkit (no firebase-admin needed)
+        # Verify token with Firebase Identity Toolkit (no firebase-admin needed).
+        # NOTE: accounts:lookup validates token freshness/existence but does NOT
+        # cryptographically verify the JWT signature. For full signature verification
+        # install firebase-admin and use auth.verify_id_token(id_token) instead.
         resp = http_requests.post(
             f'https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}',
             json={'idToken': id_token},

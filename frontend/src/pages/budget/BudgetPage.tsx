@@ -56,10 +56,11 @@ function BudgetModal({ onClose }: { onClose: () => void }) {
         <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="space-y-4">
           <div>
             <label className="label">Category</label>
-            <select className="input" {...register('category', { required: 'Required' })}>
+            <select className="input" {...register('category', { required: 'Category is required' })}>
               <option value="">Select category</option>
               {CATEGORIES.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
             </select>
+            {errors.category && <p className="text-danger text-xs mt-1">{errors.category.message as string}</p>}
           </div>
           <div>
             <label className="label">Budget Amount (PKR)</label>
@@ -155,7 +156,7 @@ export default function BudgetPage() {
           {budgets?.map((budget: any, i: number) => {
             const catInfo = getCatInfo(budget.category)
             const exceeded = budget.is_exceeded
-            const pct = budget.percentage_used
+            const pct = budget.percentage_used ?? 0
 
             return (
               <motion.div

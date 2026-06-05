@@ -17,6 +17,7 @@ function GoalModal({ onClose, editData }: { onClose: () => void; editData?: any 
       toast.success(editData ? 'Goal updated!' : 'Goal created! 🎯')
       onClose()
     },
+    onError: (err: any) => toast.error(err?.response?.data?.detail || 'Failed to save goal'),
   })
 
   return (
@@ -89,6 +90,7 @@ function AddAmountModal({ goal, onClose }: { goal: any; onClose: () => void }) {
       toast.success(`₨${parseFloat(amount).toLocaleString()} added to "${goal.name}"!`)
       onClose()
     },
+    onError: () => toast.error('Failed to add savings'),
   })
 
   return (
@@ -118,7 +120,7 @@ function AddAmountModal({ goal, onClose }: { goal: any; onClose: () => void }) {
           <button onClick={onClose} className="btn-secondary flex-1">Cancel</button>
           <button
             onClick={() => mutation.mutate()}
-            disabled={!amount || parseFloat(amount) <= 0 || mutation.isPending}
+            disabled={!amount || isNaN(parseFloat(amount)) || parseFloat(amount) <= 0 || mutation.isPending}
             className="btn-primary flex-1"
           >
             {mutation.isPending ? <div className="spinner w-4 h-4 border-2 mx-auto" /> : 'Add Savings'}
@@ -148,7 +150,7 @@ export default function SavingsPage() {
     },
   })
 
-  const totalSaved = goals?.reduce((s: number, g: any) => s + parseFloat(g.current_amount), 0) || 0
+  const totalSaved = goals?.reduce((s: number, g: any) => s + parseFloat(g.current_amount ?? 0), 0) || 0
   const completedGoals = goals?.filter((g: any) => g.is_completed).length || 0
 
   return (
@@ -235,13 +237,13 @@ export default function SavingsPage() {
                 <div className="w-full bg-white/5 rounded-full h-3 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
-                    animate={{ width: `${goal.progress_percentage}%` }}
+                    animate={{ width: `${goal.progress_percentage ?? 0}%` }}
                     transition={{ duration: 1, ease: 'easeOut', delay: i * 0.1 }}
                     className="h-full rounded-full bg-gradient-to-r from-success to-emerald-400"
                   />
                 </div>
                 <div className="flex justify-between text-xs text-white/40 mt-1">
-                  <span>{goal.progress_percentage}% saved</span>
+                  <span>{goal.progress_percentage ?? 0}% saved</span>
                   <span>₨{Number(goal.remaining_amount).toLocaleString()} to go</span>
                 </div>
               </div>

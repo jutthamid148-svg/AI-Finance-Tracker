@@ -1,14 +1,31 @@
+import functools
+import operator
 from rest_framework import generics, permissions, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.exceptions import ParseError
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Sum, Count
+from django.db.models import Sum, Count, Q
 from django.utils import timezone
 import datetime
 
 from .models import Income, Expense
 from .serializers import IncomeSerializer, ExpenseSerializer
 from users.models import Notification
+
+
+def _validated_month_year(query_params):
+    """Returns (month_int, year_int) or raises ParseError."""
+    month = query_params.get('month')
+    year = query_params.get('year')
+    try:
+        m = int(month) if month else None
+        y = int(year) if year else None
+        if m is not None and not (1 <= m <= 12):
+            raise ValueError
+    except (ValueError, TypeError):
+        raise ParseError('month must be an integer between 1 and 12, year must be a valid integer')
+    return m, y
 
 
 class IncomeListCreateView(generics.ListCreateAPIView):
@@ -21,8 +38,7 @@ class IncomeListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = Income.objects.filter(user=self.request.user)
-        month = self.request.query_params.get('month')
-        year = self.request.query_params.get('year')
+        month, year = _validated_month_year(self.request.query_params)
         if month:
             qs = qs.filter(date__month=month)
         if year:
@@ -78,8 +94,7 @@ class ExpenseListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = Expense.objects.filter(user=self.request.user)
-        month = self.request.query_params.get('month')
-        year = self.request.query_params.get('year')
+        month, year = _validated_month_year(self.request.query_params)
         category = self.request.query_params.get('category')
         if month:
             qs = qs.filter(date__month=month)
@@ -99,35 +114,48 @@ class ExpenseDetailView(generics.RetrieveUpdateDestroyAPIView):
 
 
 class MonthlyChartDataView(APIView):
-    """Returns 6-month income vs expense trend data"""
+    """Returns 6-month income vs expense trend data (2 DB queries instead of 12)"""
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
         user = request.user
         today = timezone.now().date()
-        months_data = []
 
+        # Build the 6 calendar month/year pairs
+        month_year_pairs = []
         for i in range(5, -1, -1):
-            # Step back i calendar months from the current month (not 28-day steps)
-            month = today.month - i
-            year = today.year + (month - 1) // 12
-            month = ((month - 1) % 12) + 1
-            d = today.replace(year=year, month=month, day=1)
-            month_name = d.strftime('%b %Y')
+            m = today.month - i
+            y = today.year + (m - 1) // 12
+            m = ((m - 1) % 12) + 1
+            month_year_pairs.append((y, m))
 
-            income_total = Income.objects.filter(
-                user=user, date__month=month, date__year=year
-            ).aggregate(total=Sum('amount'))['total'] or 0
+        filter_q = functools.reduce(operator.or_, [
+            Q(date__year=y, date__month=m) for y, m in month_year_pairs
+        ])
 
-            expense_total = Expense.objects.filter(
-                user=user, date__month=month, date__year=year
-            ).aggregate(total=Sum('amount'))['total'] or 0
+        income_map = {
+            (r['date__year'], r['date__month']): float(r['total'])
+            for r in Income.objects.filter(user=user).filter(filter_q)
+                .values('date__year', 'date__month')
+                .annotate(total=Sum('amount'))
+        }
+        expense_map = {
+            (r['date__year'], r['date__month']): float(r['total'])
+            for r in Expense.objects.filter(user=user).filter(filter_q)
+                .values('date__year', 'date__month')
+                .annotate(total=Sum('amount'))
+        }
 
+        months_data = []
+        for y, m in month_year_pairs:
+            d = today.replace(year=y, month=m, day=1)
+            inc = income_map.get((y, m), 0.0)
+            exp = expense_map.get((y, m), 0.0)
             months_data.append({
-                'month': month_name,
-                'income': float(income_total),
-                'expenses': float(expense_total),
-                'savings': float(income_total - expense_total),
+                'month': d.strftime('%b %Y'),
+                'income': inc,
+                'expenses': exp,
+                'savings': inc - exp,
             })
 
         return Response(months_data)

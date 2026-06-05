@@ -1,6 +1,7 @@
+import calendar
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import permissions
+from rest_framework import permissions, status
 from django.http import HttpResponse
 from django.utils import timezone
 from django.db.models import Sum
@@ -17,8 +18,13 @@ class MonthlyReportView(APIView):
     def get(self, request):
         user = request.user
         now = timezone.now()
-        month = int(request.query_params.get('month', now.month))
-        year = int(request.query_params.get('year', now.year))
+        try:
+            month = int(request.query_params.get('month', now.month))
+            year = int(request.query_params.get('year', now.year))
+            if not (1 <= month <= 12) or year < 2000:
+                raise ValueError
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid month or year'}, status=status.HTTP_400_BAD_REQUEST)
 
         income_data = Income.objects.filter(user=user, date__month=month, date__year=year)
         expense_data = Expense.objects.filter(user=user, date__month=month, date__year=year)
@@ -26,11 +32,15 @@ class MonthlyReportView(APIView):
         total_income = float(income_data.aggregate(t=Sum('amount'))['t'] or 0)
         total_expenses = float(expense_data.aggregate(t=Sum('amount'))['t'] or 0)
 
-        category_breakdown = []
-        for cat in ['food', 'transport', 'shopping', 'bills', 'health', 'education', 'entertainment', 'other']:
-            cat_total = float(expense_data.filter(category=cat).aggregate(t=Sum('amount'))['t'] or 0)
-            if cat_total > 0:
-                category_breakdown.append({'category': cat, 'amount': cat_total})
+        cat_totals = {
+            row['category']: float(row['t'])
+            for row in expense_data.values('category').annotate(t=Sum('amount'))
+        }
+        category_breakdown = [
+            {'category': cat, 'amount': cat_totals[cat]}
+            for cat in ['food', 'transport', 'shopping', 'bills', 'health', 'education', 'entertainment', 'other']
+            if cat in cat_totals
+        ]
 
         return Response({
             'month': month,
@@ -61,8 +71,13 @@ class ExportPDFView(APIView):
 
         user = request.user
         now = timezone.now()
-        month = int(request.query_params.get('month', now.month))
-        year = int(request.query_params.get('year', now.year))
+        try:
+            month = int(request.query_params.get('month', now.month))
+            year = int(request.query_params.get('year', now.year))
+            if not (1 <= month <= 12) or year < 2000:
+                raise ValueError
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid month or year'}, status=status.HTTP_400_BAD_REQUEST)
 
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(buffer, pagesize=A4)
@@ -76,7 +91,7 @@ class ExportPDFView(APIView):
         )
 
         story.append(Paragraph("AI Finance Tracker", title_style))
-        story.append(Paragraph(f"Monthly Report - {now.strftime('%B %Y')}", styles['Heading2']))
+        story.append(Paragraph(f"Monthly Report - {calendar.month_name[month]} {year}", styles['Heading2']))
         story.append(Paragraph(f"Generated for: {user.full_name}", styles['Normal']))
         story.append(Spacer(1, 0.5 * cm))
 
@@ -111,9 +126,13 @@ class ExportPDFView(APIView):
 
         story.append(Paragraph("Expense by Category", styles['Heading2']))
         expenses = Expense.objects.filter(user=user, date__month=month, date__year=year)
+        cat_totals = {
+            row['category']: float(row['t'])
+            for row in expenses.values('category').annotate(t=Sum('amount'))
+        }
         cat_data = [['Category', 'Amount (PKR)', '% of Total']]
         for cat in ['food', 'transport', 'shopping', 'bills', 'health', 'education', 'entertainment', 'other']:
-            amt = float(expenses.filter(category=cat).aggregate(t=Sum('amount'))['t'] or 0)
+            amt = cat_totals.get(cat, 0.0)
             if amt > 0:
                 pct = (amt / expense_total * 100) if expense_total > 0 else 0
                 cat_data.append([cat.capitalize(), f'₨{amt:,.2f}', f'{pct:.1f}%'])
@@ -149,8 +168,13 @@ class ExportExcelView(APIView):
 
         user = request.user
         now = timezone.now()
-        month = int(request.query_params.get('month', now.month))
-        year = int(request.query_params.get('year', now.year))
+        try:
+            month = int(request.query_params.get('month', now.month))
+            year = int(request.query_params.get('year', now.year))
+            if not (1 <= month <= 12) or year < 2000:
+                raise ValueError
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid month or year'}, status=status.HTTP_400_BAD_REQUEST)
 
         wb = openpyxl.Workbook()
         ws = wb.active
@@ -161,7 +185,7 @@ class ExportExcelView(APIView):
 
         ws['A1'] = 'AI Finance Tracker - Monthly Report'
         ws['A1'].font = Font(bold=True, size=16, color='6366F1')
-        ws['A2'] = f'Period: {now.strftime("%B %Y")} | User: {user.full_name}'
+        ws['A2'] = f'Period: {calendar.month_name[month]} {year} | User: {user.full_name}'
 
         ws['A4'] = 'INCOME'
         ws['A4'].font = Font(bold=True, size=12)

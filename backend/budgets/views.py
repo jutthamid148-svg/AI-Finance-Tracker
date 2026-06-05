@@ -13,13 +13,17 @@ class BudgetListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         qs = Budget.objects.filter(user=self.request.user)
-        month = self.request.query_params.get('month')
-        year = self.request.query_params.get('year')
         now = timezone.now()
-        qs = qs.filter(
-            month=month or now.month,
-            year=year or now.year
-        )
+        try:
+            month_param = self.request.query_params.get('month')
+            year_param = self.request.query_params.get('year')
+            month = int(month_param) if month_param else now.month
+            year = int(year_param) if year_param else now.year
+            if not (1 <= month <= 12) or year < 2000:
+                raise ValueError
+        except (ValueError, TypeError):
+            month, year = now.month, now.year
+        qs = qs.filter(month=month, year=year)
         return qs
 
     def perform_create(self, serializer):
@@ -47,7 +51,7 @@ class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
             Notification.objects.get_or_create(
                 user=self.request.user,
                 notification_type='budget_exceeded',
-                title='Budget Exceeded',
+                title=f'Budget Exceeded: {budget.category.title()}',
                 defaults={
                     'message': f'Your {budget.category} budget for this month is exceeded!',
                 }

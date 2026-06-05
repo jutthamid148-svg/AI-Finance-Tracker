@@ -64,7 +64,7 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
       type === 'income' ? transactionAPI.addIncome(data) : transactionAPI.addExpense(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
-      qc.invalidateQueries({ queryKey: ['recent-transactions'] })
+      qc.invalidateQueries({ queryKey: ['recent-transactions'], exact: false })
       qc.invalidateQueries({ queryKey: ['monthly-chart'] })
       qc.invalidateQueries({ queryKey: ['category-chart'] })
       toast.success(type === 'income' ? 'Income added! 💰' : 'Expense recorded! 📝')

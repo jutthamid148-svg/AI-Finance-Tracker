@@ -15,6 +15,10 @@ FIREBASE_API_KEY = os.getenv('FIREBASE_API_KEY', '')
 
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
+if not DEBUG and os.getenv('SECRET_KEY', '').startswith('django-insecure-'):
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('SECRET_KEY must be set to a secure value in production.')
+
 ALLOWED_HOSTS = os.getenv(
     'ALLOWED_HOSTS',
     'localhost,127.0.0.1,.vercel.app,.now.sh'
@@ -152,8 +156,14 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
 
-# CORS — allow all Vercel domains + localhost
-CORS_ALLOW_ALL_ORIGINS = True          # simplest fix for serverless demo
+# CORS — specific origins only; CORS_ALLOW_ALL_ORIGINS + credentials violates the spec
+_cors_origins = ['http://localhost:5173', 'http://localhost:3000']
+_frontend_url = os.getenv('FRONTEND_URL', '')
+if _frontend_url and _frontend_url not in _cors_origins:
+    _cors_origins.append(_frontend_url)
+CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = _cors_origins
+CORS_ALLOWED_ORIGIN_REGEXES = [r'^https://[\w-]+\.vercel\.app$']
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',

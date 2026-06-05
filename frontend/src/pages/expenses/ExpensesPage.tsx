@@ -133,7 +133,7 @@ export default function ExpensesPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => transactionAPI.deleteExpense(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['expenses'] })
+      queryClient.invalidateQueries({ queryKey: ['expenses'], exact: false })
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] })
       toast.success('Expense deleted')
     },

@@ -41,7 +41,7 @@ class UserUpdateSerializer(serializers.ModelSerializer):
 
     def validate_avatar(self, value):
         if value and len(value) > 3_500_000:
-            raise serializers.ValidationError('Image too large. Maximum size is 2MB.')
+            raise serializers.ValidationError('Image too large. Maximum size is 3.5MB.')
         if value and not value.startswith('data:image/'):
             raise serializers.ValidationError('Invalid image format.')
         return value

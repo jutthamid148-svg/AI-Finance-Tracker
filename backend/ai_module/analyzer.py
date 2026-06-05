@@ -22,6 +22,8 @@ class FinanceAnalyzer:
         self._load_data()
 
     def _load_data(self):
+        if not ML_AVAILABLE:
+            raise ImportError('pandas, numpy, and scikit-learn are required for AI features.')
         from transactions.models import Income, Expense
 
         expenses_qs = Expense.objects.filter(user=self.user).values(

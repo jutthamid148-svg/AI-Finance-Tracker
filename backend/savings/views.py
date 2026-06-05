@@ -42,7 +42,10 @@ class AddToSavingsView(APIView):
     def post(self, request, pk):
         try:
             goal = SavingsGoal.objects.get(id=pk, user=request.user)
-            amount = float(request.data.get('amount', 0))
+            try:
+                amount = float(request.data.get('amount', 0))
+            except (ValueError, TypeError):
+                return Response({'error': 'Invalid amount'}, status=status.HTTP_400_BAD_REQUEST)
             if amount <= 0:
                 return Response({'error': 'Amount must be positive'}, status=status.HTTP_400_BAD_REQUEST)
 
