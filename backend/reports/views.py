@@ -105,9 +105,9 @@ class ExportPDFView(APIView):
 
         summary_data = [
             ['Metric', 'Amount (PKR)'],
-            ['Total Income', f'₨{income_total:,.2f}'],
-            ['Total Expenses', f'₨{expense_total:,.2f}'],
-            ['Net Savings', f'₨{(income_total - expense_total):,.2f}'],
+            ['Total Income', f'Rs.{income_total:,.2f}'],
+            ['Total Expenses', f'Rs.{expense_total:,.2f}'],
+            ['Net Savings', f'Rs.{(income_total - expense_total):,.2f}'],
             ['Savings Rate', f'{round(((income_total - expense_total) / income_total * 100) if income_total > 0 else 0, 1)}%'],
         ]
 
@@ -135,7 +135,7 @@ class ExportPDFView(APIView):
             amt = cat_totals.get(cat, 0.0)
             if amt > 0:
                 pct = (amt / expense_total * 100) if expense_total > 0 else 0
-                cat_data.append([cat.capitalize(), f'₨{amt:,.2f}', f'{pct:.1f}%'])
+                cat_data.append([cat.capitalize(), f'Rs.{amt:,.2f}', f'{pct:.1f}%'])
 
         if len(cat_data) > 1:
             cat_table = Table(cat_data, colWidths=[6 * cm, 6 * cm, 4 * cm])
