@@ -2,8 +2,9 @@ from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from rest_framework_simplejwt.views import TokenObtainPairView
-from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer, TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
@@ -34,6 +35,35 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     serializer_class = CustomTokenObtainPairSerializer
+
+
+class ActiveUserTokenRefreshView(TokenRefreshView):
+    """Token refresh that also checks if user is still active"""
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except TokenError as e:
+            raise InvalidToken(e.args[0])
+
+        # Check if user is still active
+        refresh_token = request.data.get('refresh', '')
+        if refresh_token:
+            try:
+                from rest_framework_simplejwt.tokens import RefreshToken as RT
+                token = RT(refresh_token)
+                user_id = token.payload.get('user_id')
+                if user_id:
+                    user = User.objects.filter(id=user_id).first()
+                    if user and not user.is_active:
+                        return Response(
+                            {'detail': 'User account has been deactivated'},
+                            status=status.HTTP_401_UNAUTHORIZED
+                        )
+            except Exception:
+                pass
+
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 class RegisterView(generics.CreateAPIView):

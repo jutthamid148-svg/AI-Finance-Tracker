@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -217,8 +217,11 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
             ${isActive ? 'bg-white/8 border border-white/10' : 'hover:bg-white/5'}
           `}
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-xs font-bold shadow-md shadow-primary/20 flex-shrink-0">
-            {user?.first_name?.[0]?.toUpperCase()}{user?.last_name?.[0]?.toUpperCase()}
+          <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden shadow-md shadow-primary/20">
+            {user?.avatar
+              ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+              : <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-bold">{user?.first_name?.[0]?.toUpperCase()}{user?.last_name?.[0]?.toUpperCase()}</div>
+            }
           </div>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium truncate text-white/85">{user?.full_name || `${user?.first_name} ${user?.last_name}`}</div>
@@ -242,6 +245,15 @@ export default function DashboardLayout() {
   const { user } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [notifOpen, setNotifOpen] = useState(false)
+
+  // Check every 15s — if user is deactivated backend returns 401
+  // axios interceptor clears tokens and redirects to /login automatically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      authAPI.profile().catch(() => {})
+    }, 15000)
+    return () => clearInterval(interval)
+  }, [])
 
   const { data: notifications = [] } = useQuery({
     queryKey: ['notifications'],
@@ -339,8 +351,11 @@ export default function DashboardLayout() {
               to="/dashboard/profile"
               className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-white/5 transition-colors cursor-pointer"
             >
-              <div className="w-7 h-7 bg-gradient-to-br from-primary to-secondary rounded-full flex items-center justify-center text-[11px] font-bold shadow-sm shadow-primary/20">
-                {user?.first_name?.[0]?.toUpperCase()}{user?.last_name?.[0]?.toUpperCase()}
+              <div className="w-7 h-7 rounded-full overflow-hidden shadow-sm shadow-primary/20 flex-shrink-0">
+                {user?.avatar
+                  ? <img src={user.avatar} alt="Avatar" className="w-full h-full object-cover" />
+                  : <div className="w-full h-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-[11px] font-bold">{user?.first_name?.[0]?.toUpperCase()}{user?.last_name?.[0]?.toUpperCase()}</div>
+                }
               </div>
               <span className="hidden md:block text-sm font-medium text-white/75">{user?.first_name}</span>
             </NavLink>
