@@ -48,14 +48,21 @@ class BudgetDetailView(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         budget = serializer.save()
         if budget.is_exceeded:
-            Notification.objects.get_or_create(
+            now = timezone.now()
+            already_notified = Notification.objects.filter(
                 user=self.request.user,
                 notification_type='budget_exceeded',
                 title=f'Budget Exceeded: {budget.category.title()}',
-                defaults={
-                    'message': f'Your {budget.category} budget for this month is exceeded!',
-                }
-            )
+                created_at__month=now.month,
+                created_at__year=now.year,
+            ).exists()
+            if not already_notified:
+                Notification.objects.create(
+                    user=self.request.user,
+                    notification_type='budget_exceeded',
+                    title=f'Budget Exceeded: {budget.category.title()}',
+                    message=f'Your {budget.category} budget for this month is exceeded!',
+                )
 
 
 class BudgetSummaryView(APIView):

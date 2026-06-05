@@ -41,7 +41,7 @@ function AdminRoute({ children }: { children: React.ReactNode }) {
       <div className="spinner" />
     </div>
   )
-  if (!user.is_staff || user.email !== 'jutthamid148@gmail.com') return <Navigate to="/dashboard" replace />
+  if (!user.is_staff) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
