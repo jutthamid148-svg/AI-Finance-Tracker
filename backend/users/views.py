@@ -8,10 +8,87 @@ from rest_framework_simplejwt.exceptions import InvalidToken, TokenError
 from django.contrib.auth import authenticate
 from django.core.mail import send_mail
 from django.conf import settings
+from datetime import date, timedelta
 import uuid
 import requests as http_requests
 
 from .models import User, Notification
+
+
+def _create_demo_data(user):
+    """Create realistic demo transactions/budgets/savings for new users."""
+    try:
+        from transactions.models import Income, Expense
+        from budgets.models import Budget
+        from savings.models import SavingsGoal
+
+        today = date.today()
+        m0 = today.replace(day=1)
+        m1 = (m0 - timedelta(days=1)).replace(day=1)
+        m2 = (m1 - timedelta(days=1)).replace(day=1)
+
+        # --- Income (3 months) ---
+        incomes = [
+            (50000, 'salary',     'Monthly salary',      m2.replace(day=1)),
+            (12000, 'freelance',  'Web project payment', m2.replace(day=15)),
+            (50000, 'salary',     'Monthly salary',      m1.replace(day=1)),
+            (8000,  'business',   'Side business',       m1.replace(day=20)),
+            (50000, 'salary',     'Monthly salary',      m0.replace(day=1)),
+            (15000, 'freelance',  'App development',     m0.replace(day=10)),
+        ]
+        for amount, source, desc, dt in incomes:
+            Income.objects.create(user=user, amount=amount, source=source, description=desc, date=dt)
+
+        # --- Expenses (3 months) ---
+        expenses = [
+            (7500,  'food',          'Groceries & dining',   m2.replace(day=5)),
+            (3200,  'transport',     'Fuel & Careem',        m2.replace(day=8)),
+            (4800,  'bills',         'Electricity & Gas',    m2.replace(day=10)),
+            (5500,  'shopping',      'Clothes & shoes',      m2.replace(day=18)),
+            (2000,  'entertainment', 'Movies & outings',     m2.replace(day=22)),
+            (8200,  'food',          'Groceries & dining',   m1.replace(day=4)),
+            (3600,  'transport',     'Fuel & ride share',    m1.replace(day=9)),
+            (5100,  'bills',         'Electricity & internet',m1.replace(day=11)),
+            (3800,  'health',        'Doctor & medicines',   m1.replace(day=16)),
+            (2200,  'entertainment', 'Streaming & outings',  m1.replace(day=25)),
+            (6800,  'food',          'Groceries & dining',   m0.replace(day=3)),
+            (3000,  'transport',     'Petrol & parking',     m0.replace(day=7)),
+            (4500,  'bills',         'Electricity & Gas',    m0.replace(day=10)),
+            (3200,  'education',     'Online course',        m0.replace(day=14)),
+            (1800,  'entertainment', 'Cinema & food',        today - timedelta(days=2)),
+        ]
+        for amount, cat, desc, dt in expenses:
+            Expense.objects.create(user=user, amount=amount, category=cat, description=desc, date=dt)
+
+        # --- Budgets (current month) ---
+        budgets = [
+            ('food',          10000),
+            ('transport',     5000),
+            ('bills',         6000),
+            ('shopping',      8000),
+            ('entertainment', 3000),
+        ]
+        for cat, amt in budgets:
+            Budget.objects.get_or_create(
+                user=user, category=cat, month=today.month, year=today.year,
+                defaults={'amount': amt}
+            )
+
+        # --- Savings Goals ---
+        SavingsGoal.objects.create(
+            user=user, name='Emergency Fund', icon='🛡️', color='#6366F1',
+            target_amount=200000, current_amount=45000,
+            description='6 months of expenses as safety net',
+            target_date=today.replace(year=today.year + 1),
+        )
+        SavingsGoal.objects.create(
+            user=user, name='New Laptop', icon='💻', color='#10B981',
+            target_amount=120000, current_amount=30000,
+            description='MacBook for work & development',
+            target_date=today + timedelta(days=180),
+        )
+    except Exception:
+        pass  # Never break registration due to demo data
 from .serializers import (
     UserRegistrationSerializer, UserSerializer, UserUpdateSerializer,
     ChangePasswordSerializer, ForgotPasswordSerializer,
@@ -78,6 +155,9 @@ class RegisterView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
+
+        # Populate demo data so new users see a live dashboard
+        _create_demo_data(user)
 
         # Send verification email
         try:

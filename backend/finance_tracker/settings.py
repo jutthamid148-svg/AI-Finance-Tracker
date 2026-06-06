@@ -105,7 +105,7 @@ if _database_url:
             'HOST':     _u.hostname,
             'PORT':     str(_u.port or 5432),
             'OPTIONS':  {'sslmode': 'require', 'connect_timeout': 10},
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': 600,
         }
     }
 elif not _use_sqlite and os.getenv('DB_HOST', ''):
@@ -118,7 +118,8 @@ elif not _use_sqlite and os.getenv('DB_HOST', ''):
             'PASSWORD': os.getenv('DB_PASSWORD', ''),
             'HOST':     os.getenv('DB_HOST'),
             'PORT':     os.getenv('DB_PORT', '5432'),
-            'OPTIONS':  {'sslmode': 'require'},
+            'OPTIONS':  {'sslmode': 'require', 'connect_timeout': 10},
+            'CONN_MAX_AGE': 600,
         }
     }
 else:
