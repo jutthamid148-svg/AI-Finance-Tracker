@@ -14,6 +14,7 @@ interface User {
   is_verified: boolean
   is_staff: boolean
   is_pro: boolean
+  is_active?: boolean
   pro_since?: string
   created_at?: string
 }

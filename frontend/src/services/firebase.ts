@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, getApps } from 'firebase/app'
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth'
 
 const firebaseConfig = {
@@ -10,13 +10,23 @@ const firebaseConfig = {
   appId:             import.meta.env.VITE_FIREBASE_APP_ID,
 }
 
-const app      = initializeApp(firebaseConfig)
-export const auth           = getAuth(app)
-export const googleProvider = new GoogleAuthProvider()
+// Only initialize Firebase if API key is configured (skips crash on local dev without .env)
+const hasFirebaseConfig = !!firebaseConfig.apiKey
 
-googleProvider.setCustomParameters({ prompt: 'select_account' })
+let auth: ReturnType<typeof getAuth> | null = null
+let googleProvider: GoogleAuthProvider | null = null
+
+if (hasFirebaseConfig) {
+  const app = getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  googleProvider = new GoogleAuthProvider()
+  googleProvider.setCustomParameters({ prompt: 'select_account' })
+}
+
+export { auth, googleProvider, hasFirebaseConfig }
 
 export async function googleSignIn() {
+  if (!auth || !googleProvider) throw new Error('Google Sign-In is not configured. Please set VITE_FIREBASE_* env variables.')
   const result  = await signInWithPopup(auth, googleProvider)
   const idToken = await result.user.getIdToken()
   return {
@@ -28,5 +38,5 @@ export async function googleSignIn() {
 }
 
 export async function firebaseSignOut() {
-  await signOut(auth)
+  if (auth) await signOut(auth)
 }

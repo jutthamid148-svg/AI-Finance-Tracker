@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -13,15 +13,13 @@ import {
   CheckCircle2, Clock, Activity, Shield,
   DollarSign, BarChart2, Sparkles, Bell, BellOff,
   CalendarDays, Flame, AlertTriangle, Trophy, Layers,
+  Globe2, Hash, Calculator, Volume2, VolumeX, ChevronDown, ChevronUp,
 } from 'lucide-react'
-import {
-  authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI
-} from '../../services/api'
+import { authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI } from '../../services/api'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 
-// ── Constants ────────────────────────────────────────────────────────────────
 const CAT_COLORS: Record<string, string> = {
   food: '#F59E0B', transport: '#6366F1', shopping: '#EC4899',
   bills: '#EF4444', health: '#10B981', education: '#06B6D4',
@@ -42,24 +40,16 @@ const SOURCE_EMOJIS: Record<string, string> = {
 }
 const COLORS = ['#6366F1', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4', '#EC4899', '#64748B']
 
-// ── Quick Add Modal ──────────────────────────────────────────────────────────
 const EXPENSE_CATEGORIES = [
-  { value: 'food', label: '🍔 Food & Dining' },
-  { value: 'transport', label: '🚗 Transport' },
-  { value: 'shopping', label: '🛍️ Shopping' },
-  { value: 'bills', label: '📄 Bills & Utilities' },
-  { value: 'health', label: '🏥 Health' },
-  { value: 'education', label: '📚 Education' },
-  { value: 'entertainment', label: '🎮 Entertainment' },
-  { value: 'other', label: '💼 Other' },
+  { value: 'food', label: '🍔 Food & Dining' }, { value: 'transport', label: '🚗 Transport' },
+  { value: 'shopping', label: '🛍️ Shopping' }, { value: 'bills', label: '📄 Bills & Utilities' },
+  { value: 'health', label: '🏥 Health' }, { value: 'education', label: '📚 Education' },
+  { value: 'entertainment', label: '🎮 Entertainment' }, { value: 'other', label: '💼 Other' },
 ]
 const INCOME_SOURCES = [
-  { value: 'salary', label: '💼 Salary' },
-  { value: 'freelance', label: '💻 Freelance' },
-  { value: 'business', label: '🏢 Business' },
-  { value: 'investment', label: '📈 Investment' },
-  { value: 'gift', label: '🎁 Gift' },
-  { value: 'other', label: '💰 Other' },
+  { value: 'salary', label: '💼 Salary' }, { value: 'freelance', label: '💻 Freelance' },
+  { value: 'business', label: '🏢 Business' }, { value: 'investment', label: '📈 Investment' },
+  { value: 'gift', label: '🎁 Gift' }, { value: 'other', label: '💰 Other' },
 ]
 
 function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose: () => void }) {
@@ -67,10 +57,8 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
   const { register, handleSubmit, formState: { errors } } = useForm<Record<string, any>>({
     defaultValues: { date: new Date().toISOString().split('T')[0] },
   })
-
   const mutation = useMutation({
-    mutationFn: (data: any) =>
-      type === 'income' ? transactionAPI.addIncome(data) : transactionAPI.addExpense(data),
+    mutationFn: (data: any) => type === 'income' ? transactionAPI.addIncome(data) : transactionAPI.addExpense(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['dashboard-stats'] })
       qc.invalidateQueries({ queryKey: ['recent-transactions'], exact: false })
@@ -84,20 +72,12 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
     },
     onError: () => toast.error('Failed to save'),
   })
-
   const isIncome = type === 'income'
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
-      onClick={onClose}
-    >
-      <motion.div
-        initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
-        className="card w-full max-w-md"
-        onClick={e => e.stopPropagation()}
-      >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={onClose}>
+      <motion.div initial={{ scale: 0.92, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.92, y: 20 }}
+        className="card w-full max-w-md" onClick={e => e.stopPropagation()}>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isIncome ? 'bg-gradient-to-br from-success to-emerald-600' : 'bg-gradient-to-br from-danger to-rose-600'}`}>
@@ -107,7 +87,6 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
           </div>
           <button onClick={onClose} className="text-white/30 hover:text-white"><X size={18} /></button>
         </div>
-
         <form onSubmit={handleSubmit(d => mutation.mutate(d))} className="space-y-3.5">
           <div>
             <label className="label">Amount (PKR)</label>
@@ -115,33 +94,26 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
               {...register('amount', { required: 'Required', min: { value: 1, message: 'Must be > 0' } })} />
             {errors.amount && <p className="text-danger text-xs mt-1">{errors.amount.message as string}</p>}
           </div>
-
           <div>
             <label className="label">{isIncome ? 'Source' : 'Category'}</label>
             <select className="input" {...register(isIncome ? 'source' : 'category', { required: 'Required' })}>
               <option value="">Select {isIncome ? 'source' : 'category'}</option>
-              {(isIncome ? INCOME_SOURCES : EXPENSE_CATEGORIES).map(o => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
+              {(isIncome ? INCOME_SOURCES : EXPENSE_CATEGORIES).map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
             </select>
           </div>
-
           <div>
             <label className="label">Description (Optional)</label>
             <input className="input" placeholder={isIncome ? 'Monthly salary...' : 'Lunch, bills...'}
               {...register('description')} />
           </div>
-
           <div>
             <label className="label">Date</label>
             <input type="date" className="input" {...register('date', { required: true })} />
           </div>
-
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={onClose} className="btn-secondary flex-1 py-2.5 text-sm">Cancel</button>
             <button type="submit" disabled={mutation.isPending}
-              className={`flex-1 py-2.5 text-sm rounded-xl font-semibold text-white transition-all ${isIncome ? 'bg-gradient-to-r from-success to-emerald-600' : 'bg-gradient-to-r from-danger to-rose-600'}`}
-            >
+              className={`flex-1 py-2.5 text-sm rounded-xl font-semibold text-white transition-all ${isIncome ? 'bg-gradient-to-r from-success to-emerald-600' : 'bg-gradient-to-r from-danger to-rose-600'}`}>
               {mutation.isPending ? <div className="spinner w-4 h-4 border-2 mx-auto" /> : `Add ${isIncome ? 'Income' : 'Expense'}`}
             </button>
           </div>
@@ -151,7 +123,6 @@ function QuickAddModal({ type, onClose }: { type: 'income' | 'expense'; onClose:
   )
 }
 
-// ── Custom Tooltip ────────────────────────────────────────────────────────────
 function Tip({ active, payload, label }: any) {
   if (!active || !payload?.length) return null
   return (
@@ -166,14 +137,12 @@ function Tip({ active, payload, label }: any) {
   )
 }
 
-// ── Financial Health Score ────────────────────────────────────────────────────
 function HealthScore({ income, expenses, budgetRate }: { income: number; expenses: number; budgetRate: number }) {
   const savingsRate = income > 0 ? Math.max(((income - expenses) / income) * 100, 0) : 0
   const score = Math.min(Math.round((savingsRate * 0.5) + (budgetRate * 0.5)), 100)
   const color = score >= 70 ? '#10B981' : score >= 40 ? '#F59E0B' : '#EF4444'
   const label = score >= 70 ? 'Excellent' : score >= 40 ? 'Good' : 'Needs Work'
   const data = [{ name: 'score', value: score, fill: color }]
-
   return (
     <div className="flex flex-col items-center">
       <div className="relative">
@@ -194,7 +163,6 @@ function HealthScore({ income, expenses, budgetRate }: { income: number; expense
   )
 }
 
-// ── Main Component ────────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
@@ -203,75 +171,90 @@ export default function DashboardPage() {
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
 
-  const { data: stats } = useQuery({
-    queryKey: ['dashboard-stats'],
-    queryFn: () => authAPI.dashboardStats().then(r => r.data),
-  })
-  const { data: monthlyData } = useQuery({
-    queryKey: ['monthly-chart'],
-    queryFn: () => transactionAPI.monthlyChart().then(r => r.data),
-  })
-  const { data: categoryData } = useQuery({
-    queryKey: ['category-chart'],
-    queryFn: () => transactionAPI.categoryChart().then(r => r.data),
-  })
-  const { data: recentExpenses } = useQuery({
-    queryKey: ['recent-transactions', 'expenses'],
-    queryFn: () => transactionAPI.expenseList().then(r => (r.data.results || r.data).slice(0, 5)),
-  })
-  const { data: recentIncomes } = useQuery({
-    queryKey: ['recent-transactions', 'income'],
-    queryFn: () => transactionAPI.incomeList().then(r => (r.data.results || r.data).slice(0, 5)),
-  })
+  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => authAPI.dashboardStats().then(r => r.data) })
+  const { data: monthlyData } = useQuery({ queryKey: ['monthly-chart'], queryFn: () => transactionAPI.monthlyChart().then(r => r.data) })
+  const { data: categoryData } = useQuery({ queryKey: ['category-chart'], queryFn: () => transactionAPI.categoryChart().then(r => r.data) })
+  const { data: recentExpenses } = useQuery({ queryKey: ['recent-transactions', 'expenses'], queryFn: () => transactionAPI.expenseList().then(r => (r.data.results || r.data).slice(0, 5)) })
+  const { data: recentIncomes } = useQuery({ queryKey: ['recent-transactions', 'income'], queryFn: () => transactionAPI.incomeList().then(r => (r.data.results || r.data).slice(0, 5)) })
   const { data: budgets } = useQuery({
     queryKey: ['budgets-dashboard'],
-    queryFn: () => {
-      return budgetAPI.list({ month: currentMonth, year: currentYear })
-        .then(r => (r.data.results || r.data).slice(0, 4))
-    },
+    queryFn: () => budgetAPI.list({ month: currentMonth, year: currentYear }).then(r => (r.data.results || r.data).slice(0, 4)),
   })
-  const { data: budgetSummary } = useQuery({
-    queryKey: ['budget-summary'],
-    queryFn: () => budgetAPI.summary().then(r => r.data),
-  })
-  const { data: savings } = useQuery({
-    queryKey: ['savings-dashboard'],
-    queryFn: () => savingsAPI.list().then(r => (r.data.results || r.data).slice(0, 3)),
-  })
-  const { data: aiInsights } = useQuery({
-    queryKey: ['ai-insights-quick'],
-    queryFn: () => aiAPI.spendingAnalysis().then(r => r.data),
-  })
+  const { data: budgetSummary } = useQuery({ queryKey: ['budget-summary'], queryFn: () => budgetAPI.summary().then(r => r.data) })
+  const { data: savings } = useQuery({ queryKey: ['savings-dashboard'], queryFn: () => savingsAPI.list().then(r => (r.data.results || r.data).slice(0, 3)) })
+  const { data: allSavings } = useQuery({ queryKey: ['all-savings-goals'], queryFn: () => savingsAPI.list().then(r => r.data.results || r.data) })
+  const { data: aiInsights } = useQuery({ queryKey: ['ai-insights-quick'], queryFn: () => aiAPI.spendingAnalysis().then(r => r.data) })
   const { data: notifications, refetch: refetchNotifs } = useQuery({
     queryKey: ['dashboard-notifications'],
-    queryFn: () => authAPI.notifications().then(r => r.data),
+    queryFn: () => authAPI.notifications().then(r => r.data.results || r.data),
     refetchInterval: 60_000,
   })
-  // Top 5 expenses by amount this month
   const { data: topExpenses } = useQuery({
     queryKey: ['top-expenses', currentMonth, currentYear],
-    queryFn: () => transactionAPI.expenseList({ month: currentMonth, year: currentYear, ordering: '-amount' })
-      .then(r => (r.data.results || r.data).slice(0, 5)),
+    queryFn: () => transactionAPI.expenseList({ month: currentMonth, year: currentYear, ordering: '-amount' }).then(r => (r.data.results || r.data).slice(0, 5)),
   })
-  // All current month expenses (for weekly calc)
   const { data: monthExpenses } = useQuery({
     queryKey: ['month-expenses', currentMonth, currentYear],
-    queryFn: () => transactionAPI.expenseList({ month: currentMonth, year: currentYear })
-      .then(r => r.data.results || r.data),
+    queryFn: () => transactionAPI.expenseList({ month: currentMonth, year: currentYear }).then(r => r.data.results || r.data),
   })
-  // All current month incomes (for source breakdown)
   const { data: monthIncomes } = useQuery({
     queryKey: ['month-incomes', currentMonth, currentYear],
-    queryFn: () => transactionAPI.incomeList({ month: currentMonth, year: currentYear })
-      .then(r => r.data.results || r.data),
+    queryFn: () => transactionAPI.incomeList({ month: currentMonth, year: currentYear }).then(r => r.data.results || r.data),
+  })
+  // Currency rates — free API, cache 1 hour
+  const { data: fxData } = useQuery({
+    queryKey: ['currency-rates'],
+    queryFn: () => fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
+    staleTime: 1000 * 60 * 60,
+    retry: 1,
   })
 
-  const markAllReadMutation = useMutation({
-    mutationFn: () => authAPI.markAllRead(),
-    onSuccess: () => refetchNotifs(),
+  const markAllReadMutation = useMutation({ mutationFn: () => authAPI.markAllRead(), onSuccess: () => refetchNotifs() })
+
+  // ── Overspending alarm ────────────────────────────────────────────────────
+  const [alertDismissed, setAlertDismissed] = useState(false)
+  const [alertExpanded, setAlertExpanded]   = useState(true)
+  const [soundEnabled,  setSoundEnabled]    = useState(true)
+  const alarmPlayedRef = useRef(false)
+
+  const { data: overspendData } = useQuery({
+    queryKey: ['dashboard-overspend'],
+    queryFn: () => aiAPI.overspending().then(r => r.data),
+    retry: false,
+    staleTime: 1000 * 60 * 5,
   })
 
-  // Weekly spending: last 7 days vs previous 7 days
+  const overspendAlerts: string[] = (overspendData?.alerts || []).filter(
+    (a: string) => !a.includes('✅') && !a.toLowerCase().includes('stable')
+  )
+  const hasOverspend = overspendAlerts.length > 0
+
+  // Web Audio alarm — plays once per session when overspend detected
+  useEffect(() => {
+    if (!hasOverspend || !soundEnabled || alarmPlayedRef.current) return
+    alarmPlayedRef.current = true
+    try {
+      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      const beep = (freq: number, start: number, dur: number) => {
+        const osc  = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.connect(gain)
+        gain.connect(ctx.destination)
+        osc.type = 'square'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0.12, ctx.currentTime + start)
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + dur)
+        osc.start(ctx.currentTime + start)
+        osc.stop(ctx.currentTime + start + dur + 0.01)
+      }
+      beep(880, 0.0, 0.12)
+      beep(660, 0.18, 0.12)
+      beep(880, 0.36, 0.12)
+      beep(440, 0.55, 0.25)
+    } catch { /* audio blocked — ignore */ }
+  }, [hasOverspend, soundEnabled])
+
+  // Weekly spending
   const weeklyData = useMemo(() => {
     if (!monthExpenses) return { thisWeek: 0, lastWeek: 0, change: 0 }
     const today = new Date()
@@ -279,45 +262,58 @@ export default function DashboardPage() {
     const d7 = fmt(new Date(today.getTime() - 7 * 86400000))
     const d14 = fmt(new Date(today.getTime() - 14 * 86400000))
     const todayStr = fmt(today)
-    const thisWeek = (monthExpenses as any[])
-      .filter((e: any) => e.date >= d7 && e.date <= todayStr)
-      .reduce((s: number, e: any) => s + parseFloat(e.amount || 0), 0)
-    const lastWeek = (monthExpenses as any[])
-      .filter((e: any) => e.date >= d14 && e.date < d7)
-      .reduce((s: number, e: any) => s + parseFloat(e.amount || 0), 0)
+    const thisWeek = (monthExpenses as any[]).filter(e => e.date >= d7 && e.date <= todayStr).reduce((s, e) => s + parseFloat(e.amount || 0), 0)
+    const lastWeek = (monthExpenses as any[]).filter(e => e.date >= d14 && e.date < d7).reduce((s, e) => s + parseFloat(e.amount || 0), 0)
     const change = lastWeek > 0 ? ((thisWeek - lastWeek) / lastWeek) * 100 : 0
     return { thisWeek, lastWeek, change }
   }, [monthExpenses])
 
-  // Income grouped by source for bar chart
+  // Income by source
   const incomeBySource = useMemo(() => {
     if (!monthIncomes || !(monthIncomes as any[]).length) return []
     const grouped: Record<string, number> = {}
-    ;(monthIncomes as any[]).forEach((inc: any) => {
-      grouped[inc.source] = (grouped[inc.source] || 0) + parseFloat(inc.amount || 0)
-    })
-    return Object.entries(grouped)
-      .map(([source, total]) => ({ source, total }))
-      .sort((a, b) => b.total - a.total)
+    ;(monthIncomes as any[]).forEach((inc: any) => { grouped[inc.source] = (grouped[inc.source] || 0) + parseFloat(inc.amount || 0) })
+    return Object.entries(grouped).map(([source, total]) => ({ source, total })).sort((a, b) => b.total - a.total)
   }, [monthIncomes])
 
-  // Merge & sort recent transactions
+  // Goals close to deadline (within 30 days)
+  const urgentGoals = useMemo(() => {
+    if (!allSavings) return []
+    return (allSavings as any[]).filter(g => {
+      if (!g.target_date || g.is_completed) return false
+      const daysLeft = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000)
+      return daysLeft >= 0 && daysLeft <= 30
+    })
+  }, [allSavings])
+
+  // Quick stats
+  const txCount = ((monthExpenses as any[])?.length || 0) + ((monthIncomes as any[])?.length || 0)
+  const avgExpense = (monthExpenses as any[])?.length
+    ? (stats?.monthly_expenses || 0) / (monthExpenses as any[]).length
+    : 0
+  const netWorth = (stats?.current_balance || 0) + (stats?.total_savings || 0)
+
+  // Currency rates (USD base → PKR conversion)
+  const pkrRate = fxData?.rates?.PKR || 0
+  const currencies = pkrRate > 0 ? [
+    { code: 'USD', flag: '🇺🇸', rate: Math.round(pkrRate) },
+    { code: 'GBP', flag: '🇬🇧', rate: Math.round(pkrRate / (fxData?.rates?.GBP || 1)) },
+    { code: 'SAR', flag: '🇸🇦', rate: Math.round(pkrRate / (fxData?.rates?.SAR || 1)) },
+    { code: 'AED', flag: '🇦🇪', rate: Math.round(pkrRate / (fxData?.rates?.AED || 1)) },
+  ] : []
+
   const recentTxns = [
     ...(recentExpenses || []).map((e: any) => ({ ...e, txType: 'expense' })),
     ...(recentIncomes || []).map((i: any) => ({ ...i, txType: 'income' })),
-  ]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 6)
+  ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()).slice(0, 6)
 
-  // Monthly comparison (this month vs last month from monthlyData)
   const last2Months = (monthlyData || []).slice(-2)
   const comparisonData = last2Months.length === 2
     ? [
         { name: 'Income', lastMonth: last2Months[0].income, thisMonth: last2Months[1].income },
         { name: 'Expenses', lastMonth: last2Months[0].expenses, thisMonth: last2Months[1].expenses },
         { name: 'Savings', lastMonth: Math.max(last2Months[0].savings, 0), thisMonth: Math.max(last2Months[1].savings, 0) },
-      ]
-    : []
+      ] : []
 
   const getGreeting = () => {
     const h = new Date().getHours()
@@ -332,7 +328,100 @@ export default function DashboardPage() {
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto">
 
-      {/* ── Header ── */}
+      {/* ── 🚨 Overspending Alert Banner ── */}
+      <AnimatePresence>
+        {hasOverspend && !alertDismissed && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0,   scale: 1    }}
+            exit   ={{ opacity: 0, y: -16, scale: 0.97 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 18 }}
+            className="mb-5 rounded-2xl overflow-hidden border-2 border-danger/60"
+            style={{ background: 'linear-gradient(135deg, rgba(239,68,68,0.13) 0%, rgba(220,38,38,0.08) 100%)' }}
+          >
+            {/* Top bar */}
+            <div className="flex items-center justify-between px-4 py-3"
+              style={{ background: 'linear-gradient(90deg, rgba(239,68,68,0.25), rgba(239,68,68,0.10))' }}>
+              <div className="flex items-center gap-2.5">
+                <div className="relative flex-shrink-0">
+                  <div className="w-9 h-9 rounded-xl bg-danger/20 flex items-center justify-center">
+                    <AlertTriangle size={18} className="text-danger" />
+                  </div>
+                  {/* Pulsing ring */}
+                  <span className="absolute inset-0 rounded-xl border-2 border-danger/50 animate-ping" />
+                </div>
+                <div>
+                  <p className="font-black text-danger text-sm tracking-wide">🚨 OVERSPENDING DETECTED</p>
+                  <p className="text-danger/60 text-[10px] font-medium">{overspendAlerts.length} category{overspendAlerts.length > 1 ? 'ies' : 'y'} over last month</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5">
+                {/* Mute toggle */}
+                <button
+                  onClick={() => setSoundEnabled(v => !v)}
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                  title={soundEnabled ? 'Mute alarm' : 'Unmute alarm'}
+                >
+                  {soundEnabled ? <Volume2 size={13} className="text-white/50" /> : <VolumeX size={13} className="text-white/30" />}
+                </button>
+                {/* Collapse toggle */}
+                <button
+                  onClick={() => setAlertExpanded(v => !v)}
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors"
+                >
+                  {alertExpanded ? <ChevronUp size={13} className="text-white/50" /> : <ChevronDown size={13} className="text-white/50" />}
+                </button>
+                {/* Dismiss */}
+                <button
+                  onClick={() => setAlertDismissed(true)}
+                  className="w-7 h-7 rounded-lg bg-white/5 hover:bg-danger/20 flex items-center justify-center transition-colors"
+                  title="Dismiss"
+                >
+                  <X size={13} className="text-white/50 hover:text-danger" />
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable alerts list */}
+            <AnimatePresence>
+              {alertExpanded && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit   ={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.25 }}
+                  className="overflow-hidden"
+                >
+                  <div className="px-4 py-3 space-y-2">
+                    {overspendAlerts.map((alert: string, i: number) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.07 }}
+                        className="flex items-start gap-2.5 glass px-3 py-2.5 rounded-xl border border-danger/20"
+                      >
+                        <AlertTriangle size={12} className="text-danger flex-shrink-0 mt-0.5" />
+                        <p className="text-xs text-white/80 leading-relaxed">{alert}</p>
+                      </motion.div>
+                    ))}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <p className="text-[10px] text-white/25">Compared to last month · AI-powered detection</p>
+                      <Link to="/dashboard/ai-insights"
+                        className="text-xs text-danger/80 hover:text-danger font-semibold flex items-center gap-1 transition-colors">
+                        Full Analysis <ArrowUpRight size={11} />
+                      </Link>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Header */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
         <div className="flex items-center justify-between flex-wrap gap-3">
           <div>
@@ -344,30 +433,53 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => setQuickAdd('income')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-success to-emerald-600 hover:shadow-lg hover:shadow-success/25 transition-all hover:-translate-y-0.5">
+            <button onClick={() => setQuickAdd('income')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-success to-emerald-600 hover:shadow-lg hover:shadow-success/25 transition-all hover:-translate-y-0.5">
               <Plus size={15} /> Income
             </button>
-            <button onClick={() => setQuickAdd('expense')}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-danger to-rose-600 hover:shadow-lg hover:shadow-danger/25 transition-all hover:-translate-y-0.5">
+            <button onClick={() => setQuickAdd('expense')} className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-danger to-rose-600 hover:shadow-lg hover:shadow-danger/25 transition-all hover:-translate-y-0.5">
               <Plus size={15} /> Expense
             </button>
-            <Link to="/dashboard/ai-insights"
-              className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold btn-primary">
+            <Link to="/dashboard/ai-insights" className="hidden sm:flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-sm font-semibold btn-primary">
               <Sparkles size={14} /> AI
             </Link>
           </div>
         </div>
       </motion.div>
 
-      {/* ── Admin Panel Banner (staff only) ── */}
+      {/* Goal Deadline Alert */}
+      {urgentGoals.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          className="mb-5 rounded-2xl p-4 border border-warning/30"
+          style={{ background: 'rgba(245,158,11,0.08)' }}>
+          <div className="flex items-start gap-3">
+            <div className="w-8 h-8 rounded-xl bg-warning/20 flex items-center justify-center flex-shrink-0 mt-0.5">
+              <AlertTriangle size={15} className="text-warning" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-bold text-warning mb-1">Savings Goal Deadline Near!</p>
+              <div className="flex flex-wrap gap-2">
+                {urgentGoals.map((g: any) => {
+                  const daysLeft = Math.ceil((new Date(g.target_date).getTime() - Date.now()) / 86400000)
+                  const remaining = parseFloat(g.target_amount) - parseFloat(g.current_amount)
+                  return (
+                    <span key={g.id} className="text-xs bg-warning/10 text-warning/80 px-2.5 py-1 rounded-lg border border-warning/20">
+                      {g.icon || '🎯'} {g.name} — {daysLeft}d left · ₨{Math.max(remaining, 0).toLocaleString()} to go
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+            <Link to="/dashboard/savings" className="text-warning text-xs hover:underline flex-shrink-0">View</Link>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Admin Banner */}
       {user?.is_staff && (
-        <motion.div onClick={() => navigate('/admin')}
-          initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          whileHover={{ scale: 1.01 }}
+        <motion.div onClick={() => navigate('/admin')} initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }} whileHover={{ scale: 1.01 }}
           className="flex items-center justify-between px-5 py-3.5 rounded-2xl mb-5 cursor-pointer group relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)', border: '1px solid rgba(99,102,241,0.35)' }}
-        >
+          style={{ background: 'linear-gradient(135deg, rgba(99,102,241,0.2) 0%, rgba(139,92,246,0.15) 100%)', border: '1px solid rgba(99,102,241,0.35)' }}>
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 to-secondary/5 opacity-0 group-hover:opacity-100 transition-opacity" />
           <div className="flex items-center gap-3 relative z-10">
             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/30">
@@ -385,9 +497,8 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ── Stat Cards ── */}
-      <motion.div variants={stagger} initial="hidden" animate="visible"
-        className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-5">
+      {/* Stat Cards */}
+      <motion.div variants={stagger} initial="hidden" animate="visible" className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-4">
         {[
           { title: 'Current Balance', value: stats?.current_balance || 0, icon: Wallet, grad: 'from-primary to-secondary', change: stats?.balance_change },
           { title: 'Monthly Income', value: stats?.monthly_income || 0, icon: TrendingUp, grad: 'from-success to-emerald-600', change: stats?.income_change },
@@ -417,37 +528,47 @@ export default function DashboardPage() {
         ))}
       </motion.div>
 
-      {/* ── Row: Area Chart + Health Score ── */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-          className="card xl:col-span-2">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-bold text-sm">Income vs Expenses</h2>
-              <p className="text-white/35 text-xs">6-month trend</p>
+      {/* Quick Stats Strip */}
+      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-5">
+        {[
+          { icon: Hash, label: 'Transactions', value: txCount, unit: 'this month', color: '#6366F1' },
+          { icon: Calculator, label: 'Avg Expense', value: `₨${Math.round(avgExpense).toLocaleString()}`, unit: 'per transaction', color: '#F59E0B' },
+          { icon: TrendingUp, label: 'Net Worth', value: `₨${Math.round(netWorth / 1000)}k`, unit: 'balance + savings', color: '#10B981' },
+          { icon: TrendingDown, label: 'Net Cash Flow', value: `${stats?.monthly_income > stats?.monthly_expenses ? '+' : ''}₨${Math.abs((stats?.monthly_income || 0) - (stats?.monthly_expenses || 0)).toLocaleString()}`, unit: 'income − expenses', color: (stats?.monthly_income || 0) >= (stats?.monthly_expenses || 0) ? '#10B981' : '#EF4444' },
+        ].map((s, i) => (
+          <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 + i * 0.04 }}
+            className="glass rounded-xl px-3.5 py-3 border border-white/5 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: s.color + '20' }}>
+              <s.icon size={15} style={{ color: s.color }} />
             </div>
+            <div className="min-w-0">
+              <p className="text-white/35 text-[10px] truncate">{s.label}</p>
+              <p className="font-black text-sm" style={{ color: s.color }}>{s.value}</p>
+              <p className="text-white/20 text-[9px]">{s.unit}</p>
+            </div>
+          </motion.div>
+        ))}
+      </motion.div>
+
+      {/* Area Chart + Health */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5 mb-5">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="card xl:col-span-2">
+          <div className="flex items-center justify-between mb-4">
+            <div><h2 className="font-bold text-sm">Income vs Expenses</h2><p className="text-white/35 text-xs">6-month trend</p></div>
             <span className="badge badge-primary text-[10px]">Last 6 Months</span>
           </div>
           <ResponsiveContainer width="100%" height={220}>
             <AreaChart data={monthlyData || []} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <defs>
-                <linearGradient id="incG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10B981" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="expG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#EF4444" stopOpacity={0.25} />
-                  <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="savG" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#06B6D4" stopOpacity={0.2} />
-                  <stop offset="95%" stopColor="#06B6D4" stopOpacity={0} />
-                </linearGradient>
+                <linearGradient id="incG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#10B981" stopOpacity={0.25} /><stop offset="95%" stopColor="#10B981" stopOpacity={0} /></linearGradient>
+                <linearGradient id="expG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#EF4444" stopOpacity={0.25} /><stop offset="95%" stopColor="#EF4444" stopOpacity={0} /></linearGradient>
+                <linearGradient id="savG" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#06B6D4" stopOpacity={0.2} /><stop offset="95%" stopColor="#06B6D4" stopOpacity={0} /></linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false}
-                tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
               <Tooltip content={<Tip />} />
               <Legend wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', paddingTop: '8px' }} />
               <Area type="monotone" dataKey="income" name="Income" stroke="#10B981" fill="url(#incG)" strokeWidth={2} dot={{ fill: '#10B981', r: 3, strokeWidth: 0 }} />
@@ -457,13 +578,9 @@ export default function DashboardPage() {
           </ResponsiveContainer>
         </motion.div>
 
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
-          className="card flex flex-col">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="card flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <div>
-              <h2 className="font-bold text-sm">Financial Health</h2>
-              <p className="text-white/35 text-xs">Based on savings & budget</p>
-            </div>
+            <div><h2 className="font-bold text-sm">Financial Health</h2><p className="text-white/35 text-xs">Based on savings & budget</p></div>
             <Activity size={14} className="text-white/25" />
           </div>
           <div className="flex items-center gap-4 mb-4 pb-4 border-b border-white/5">
@@ -472,15 +589,10 @@ export default function DashboardPage() {
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <span className="text-white/40">Savings Rate</span>
-                  <span className="text-success font-medium">
-                    {stats?.monthly_income > 0
-                      ? `${Math.max(((stats.monthly_income - stats.monthly_expenses) / stats.monthly_income) * 100, 0).toFixed(0)}%`
-                      : '—'}
-                  </span>
+                  <span className="text-success font-medium">{stats?.monthly_income > 0 ? `${Math.max(((stats.monthly_income - stats.monthly_expenses) / stats.monthly_income) * 100, 0).toFixed(0)}%` : '—'}</span>
                 </div>
                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-success rounded-full transition-all"
-                    style={{ width: `${stats?.monthly_income > 0 ? Math.min(((stats.monthly_income - stats.monthly_expenses) / stats.monthly_income) * 100, 100) : 0}%` }} />
+                  <div className="h-full bg-success rounded-full" style={{ width: `${stats?.monthly_income > 0 ? Math.min(((stats.monthly_income - stats.monthly_expenses) / stats.monthly_income) * 100, 100) : 0}%` }} />
                 </div>
               </div>
               <div>
@@ -489,23 +601,18 @@ export default function DashboardPage() {
                   <span className="text-primary font-medium">{budgetSummary?.success_rate || 0}%</span>
                 </div>
                 <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary rounded-full transition-all"
-                    style={{ width: `${budgetSummary?.success_rate || 0}%` }} />
+                  <div className="h-full bg-primary rounded-full" style={{ width: `${budgetSummary?.success_rate || 0}%` }} />
                 </div>
               </div>
             </div>
           </div>
-
           <h3 className="text-xs font-semibold text-white/40 mb-2">Spending by Category</h3>
           {categoryData?.length > 0 ? (
             <>
               <ResponsiveContainer width="100%" height={110}>
                 <PieChart>
-                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={28} outerRadius={50}
-                    paddingAngle={3} dataKey="total">
-                    {categoryData.map((e: any, i: number) => (
-                      <Cell key={i} fill={CAT_COLORS[e.category] || COLORS[i % COLORS.length]} stroke="transparent" />
-                    ))}
+                  <Pie data={categoryData} cx="50%" cy="50%" innerRadius={28} outerRadius={50} paddingAngle={3} dataKey="total">
+                    {categoryData.map((e: any, i: number) => <Cell key={i} fill={CAT_COLORS[e.category] || COLORS[i % COLORS.length]} stroke="transparent" />)}
                   </Pie>
                   <Tooltip formatter={(v: any) => `₨${Number(v).toLocaleString()}`}
                     contentStyle={{ background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', fontSize: '11px' }} />
@@ -520,22 +627,15 @@ export default function DashboardPage() {
                 ))}
               </div>
             </>
-          ) : (
-            <div className="flex-1 flex items-center justify-center text-white/20 text-xs">No data this month</div>
-          )}
+          ) : <div className="flex-1 flex items-center justify-center text-white/20 text-xs">No data this month</div>}
         </motion.div>
       </div>
 
-      {/* ── Row: Monthly Comparison + Recent Transactions ── */}
+      {/* Monthly Comparison + Recent Transactions */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="card">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-bold text-sm">Monthly Comparison</h2>
-              <p className="text-white/35 text-xs">
-                {last2Months.length === 2 ? `${last2Months[0].month} vs ${last2Months[1].month}` : 'This month vs last month'}
-              </p>
-            </div>
+            <div><h2 className="font-bold text-sm">Monthly Comparison</h2><p className="text-white/35 text-xs">{last2Months.length === 2 ? `${last2Months[0].month} vs ${last2Months[1].month}` : 'This month vs last month'}</p></div>
             <BarChart2 size={15} className="text-white/20" />
           </div>
           {comparisonData.length > 0 ? (
@@ -544,8 +644,7 @@ export default function DashboardPage() {
                 <BarChart data={comparisonData} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                   <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 11 }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} axisLine={false} tickLine={false}
-                    tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
+                  <YAxis tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
                   <Tooltip content={<Tip />} />
                   <Legend wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.4)', paddingTop: '8px' }} />
                   <Bar dataKey="lastMonth" name={last2Months[0]?.month || 'Last Month'} fill="rgba(255,255,255,0.12)" radius={[4, 4, 0, 0]} maxBarSize={32} />
@@ -564,26 +663,19 @@ export default function DashboardPage() {
                     return (
                       <div key={i} className="glass p-2 rounded-lg border border-white/5 text-center">
                         <p className="text-white/30 text-[9px] mb-0.5">{item.label}</p>
-                        <p className={`text-xs font-bold ${isPositive ? 'text-success' : 'text-danger'}`}>
-                          {pct >= 0 ? '+' : ''}{pct.toFixed(0)}%
-                        </p>
+                        <p className={`text-xs font-bold ${isPositive ? 'text-success' : 'text-danger'}`}>{pct >= 0 ? '+' : ''}{pct.toFixed(0)}%</p>
                       </div>
                     )
                   })}
                 </div>
               )}
             </>
-          ) : (
-            <div className="h-44 flex items-center justify-center text-white/20 text-sm">Not enough data for comparison</div>
-          )}
+          ) : <div className="h-44 flex items-center justify-center text-white/20 text-sm">Not enough data for comparison</div>}
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }} className="card">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-bold text-sm">Recent Transactions</h2>
-              <p className="text-white/35 text-xs">Latest income & expenses</p>
-            </div>
+            <div><h2 className="font-bold text-sm">Recent Transactions</h2><p className="text-white/35 text-xs">Latest income & expenses</p></div>
             <div className="flex gap-2">
               <Link to="/dashboard/income" className="text-[10px] text-white/30 hover:text-success transition-colors">Income</Link>
               <span className="text-white/15">·</span>
@@ -591,30 +683,25 @@ export default function DashboardPage() {
             </div>
           </div>
           {recentTxns.length === 0 ? (
-            <div className="h-44 flex flex-col items-center justify-center text-white/20 gap-2">
-              <Clock size={28} /><p className="text-sm">No transactions yet</p>
-            </div>
+            <div className="h-44 flex flex-col items-center justify-center text-white/20 gap-2"><Clock size={28} /><p className="text-sm">No transactions yet</p></div>
           ) : (
             <div className="space-y-2">
               {recentTxns.map((tx: any, i: number) => {
-                const isIncome = tx.txType === 'income'
+                const isInc = tx.txType === 'income'
                 const catColor = CAT_COLORS[tx.category] || '#6366F1'
                 return (
-                  <motion.div key={`${tx.txType}-${tx.id}`}
-                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
+                  <motion.div key={`${tx.txType}-${tx.id}`} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                     className="flex items-center gap-3 py-2 px-3 rounded-xl hover:bg-white/[0.03] transition-colors border border-transparent hover:border-white/5">
                     <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 text-sm"
-                      style={{ background: isIncome ? 'rgba(16,185,129,0.15)' : catColor + '20' }}>
-                      {isIncome ? '💰' : CAT_EMOJIS[tx.category] || '💼'}
+                      style={{ background: isInc ? 'rgba(16,185,129,0.15)' : catColor + '20' }}>
+                      {isInc ? '💰' : CAT_EMOJIS[tx.category] || '💼'}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-white/80 truncate">
-                        {tx.description || (isIncome ? tx.source : tx.category)}
-                      </p>
+                      <p className="text-sm font-medium text-white/80 truncate">{tx.description || (isInc ? tx.source : tx.category)}</p>
                       <p className="text-[10px] text-white/30">{tx.date}</p>
                     </div>
-                    <span className={`text-sm font-bold flex-shrink-0 ${isIncome ? 'text-success' : 'text-danger'}`}>
-                      {isIncome ? '+' : '-'}₨{Number(tx.amount).toLocaleString()}
+                    <span className={`text-sm font-bold flex-shrink-0 ${isInc ? 'text-success' : 'text-danger'}`}>
+                      {isInc ? '+' : '-'}₨{Number(tx.amount).toLocaleString()}
                     </span>
                   </motion.div>
                 )
@@ -622,36 +709,26 @@ export default function DashboardPage() {
             </div>
           )}
           <div className="flex gap-2 mt-4 pt-3 border-t border-white/5">
-            <button onClick={() => setQuickAdd('income')}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-success hover:bg-success/10 transition-colors border border-success/20">
+            <button onClick={() => setQuickAdd('income')} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-success hover:bg-success/10 transition-colors border border-success/20">
               <Plus size={12} /> Add Income
             </button>
-            <button onClick={() => setQuickAdd('expense')}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-danger hover:bg-danger/10 transition-colors border border-danger/20">
+            <button onClick={() => setQuickAdd('expense')} className="flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs text-danger hover:bg-danger/10 transition-colors border border-danger/20">
               <Plus size={12} /> Add Expense
             </button>
           </div>
         </motion.div>
       </div>
 
-      {/* ── Row: Budget Progress + Savings Goals ── */}
+      {/* Budget + Savings */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }} className="card">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-bold text-sm">Budget Progress</h2>
-              <p className="text-white/35 text-xs">
-                {new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}
-              </p>
-            </div>
-            <Link to="/dashboard/budget" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">
-              View All <ArrowUpRight size={11} />
-            </Link>
+            <div><h2 className="font-bold text-sm">Budget Progress</h2><p className="text-white/35 text-xs">{new Date().toLocaleString('default', { month: 'long' })} {new Date().getFullYear()}</p></div>
+            <Link to="/dashboard/budget" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">View All <ArrowUpRight size={11} /></Link>
           </div>
           {!budgets || budgets.length === 0 ? (
             <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2">
-              <DollarSign size={24} />
-              <p className="text-xs text-center">No budgets set. <Link to="/dashboard/budget" className="text-primary">Add budget</Link></p>
+              <DollarSign size={24} /><p className="text-xs text-center">No budgets set. <Link to="/dashboard/budget" className="text-primary">Add budget</Link></p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -670,14 +747,11 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <span className="text-xs font-semibold" style={{ color: barColor }}>{pct.toFixed(0)}%</span>
-                        <span className="text-white/25 text-[10px] ml-1">
-                          ₨{Number(b.spent).toLocaleString()} / ₨{Number(b.amount).toLocaleString()}
-                        </span>
+                        <span className="text-white/25 text-[10px] ml-1">₨{Number(b.spent).toLocaleString()} / ₨{Number(b.amount).toLocaleString()}</span>
                       </div>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.1 + i * 0.1, ease: 'easeOut' }}
                         className="h-full rounded-full" style={{ background: barColor }} />
                     </div>
                   </div>
@@ -687,36 +761,21 @@ export default function DashboardPage() {
           )}
           {budgetSummary && (
             <div className="grid grid-cols-3 gap-2 mt-4 pt-3 border-t border-white/5 text-xs text-center">
-              <div>
-                <p className="text-white/30">Total Budget</p>
-                <p className="font-bold text-white/70">₨{Number(budgetSummary.total_budget || 0).toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-white/30">Spent</p>
-                <p className="font-bold text-danger">₨{Number(budgetSummary.total_spent || 0).toLocaleString()}</p>
-              </div>
-              <div>
-                <p className="text-white/30">Remaining</p>
-                <p className="font-bold text-success">₨{Number(budgetSummary.total_remaining || 0).toLocaleString()}</p>
-              </div>
+              <div><p className="text-white/30">Total Budget</p><p className="font-bold text-white/70">₨{Number(budgetSummary.total_budget || 0).toLocaleString()}</p></div>
+              <div><p className="text-white/30">Spent</p><p className="font-bold text-danger">₨{Number(budgetSummary.total_spent || 0).toLocaleString()}</p></div>
+              <div><p className="text-white/30">Remaining</p><p className="font-bold text-success">₨{Number(budgetSummary.total_remaining || 0).toLocaleString()}</p></div>
             </div>
           )}
         </motion.div>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }} className="card">
           <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-bold text-sm">Savings Goals</h2>
-              <p className="text-white/35 text-xs">Your financial milestones</p>
-            </div>
-            <Link to="/dashboard/savings" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">
-              View All <ArrowUpRight size={11} />
-            </Link>
+            <div><h2 className="font-bold text-sm">Savings Goals</h2><p className="text-white/35 text-xs">Your financial milestones</p></div>
+            <Link to="/dashboard/savings" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">View All <ArrowUpRight size={11} /></Link>
           </div>
           {!savings || savings.length === 0 ? (
             <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2">
-              <Target size={24} />
-              <p className="text-xs text-center">No goals yet. <Link to="/dashboard/savings" className="text-primary">Create goal</Link></p>
+              <Target size={24} /><p className="text-xs text-center">No goals yet. <Link to="/dashboard/savings" className="text-primary">Create goal</Link></p>
             </div>
           ) : (
             <div className="space-y-4">
@@ -734,14 +793,11 @@ export default function DashboardPage() {
                       </div>
                       <div className="text-right">
                         <p className="text-xs font-bold text-success">{pct.toFixed(0)}%</p>
-                        <p className="text-[10px] text-white/25">
-                          ₨{Number(g.current_amount).toLocaleString()} / ₨{Number(g.target_amount).toLocaleString()}
-                        </p>
+                        <p className="text-[10px] text-white/25">₨{Number(g.current_amount).toLocaleString()} / ₨{Number(g.target_amount).toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.9, delay: 0.2 + i * 0.1, ease: 'easeOut' }}
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.9, delay: 0.2 + i * 0.1, ease: 'easeOut' }}
                         className="h-full rounded-full bg-gradient-to-r from-success to-emerald-400" />
                     </div>
                     {g.target_date && <p className="text-[10px] text-white/25 mt-0.5">Target: {g.target_date}</p>}
@@ -753,9 +809,8 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* ── NEW Row: Spending Pace + Notifications ── */}
+      {/* Spending Pace + Notifications */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
-        {/* Spending Pace */}
         {(() => {
           const totalDays = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
           const daysPassed = now.getDate()
@@ -771,30 +826,16 @@ export default function DashboardPage() {
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.48 }} className="card">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-9 h-9 bg-gradient-to-br from-warning to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-warning/25">
-                    <Flame size={16} className="text-white" />
-                  </div>
-                  <div>
-                    <h2 className="font-bold text-sm">Spending Pace</h2>
-                    <p className="text-white/35 text-xs">{daysLeft} days left this month</p>
-                  </div>
+                  <div className="w-9 h-9 bg-gradient-to-br from-warning to-amber-600 rounded-xl flex items-center justify-center shadow-lg shadow-warning/25"><Flame size={16} className="text-white" /></div>
+                  <div><h2 className="font-bold text-sm">Spending Pace</h2><p className="text-white/35 text-xs">{daysLeft} days left this month</p></div>
                 </div>
-                <span className="text-xs font-bold px-2.5 py-1 rounded-lg"
-                  style={{ background: onTrack ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: paceColor }}>
+                <span className="text-xs font-bold px-2.5 py-1 rounded-lg" style={{ background: onTrack ? 'rgba(16,185,129,0.12)' : 'rgba(239,68,68,0.12)', color: paceColor }}>
                   {onTrack ? '✓ On Track' : '⚠ Over Pace'}
                 </span>
               </div>
               <div className="grid grid-cols-2 gap-3 mb-4">
-                <div className="glass p-3 rounded-xl">
-                  <p className="text-white/35 text-[10px] mb-1">Daily Average</p>
-                  <p className="text-base font-black">₨{Math.round(dailyAvg).toLocaleString()}</p>
-                  <p className="text-white/30 text-[10px]">per day so far</p>
-                </div>
-                <div className="glass p-3 rounded-xl">
-                  <p className="text-white/35 text-[10px] mb-1">Projected Total</p>
-                  <p className="text-base font-black" style={{ color: paceColor }}>₨{Math.round(projected).toLocaleString()}</p>
-                  <p className="text-white/30 text-[10px]">by month end</p>
-                </div>
+                <div className="glass p-3 rounded-xl"><p className="text-white/35 text-[10px] mb-1">Daily Average</p><p className="text-base font-black">₨{Math.round(dailyAvg).toLocaleString()}</p><p className="text-white/30 text-[10px]">per day so far</p></div>
+                <div className="glass p-3 rounded-xl"><p className="text-white/35 text-[10px] mb-1">Projected Total</p><p className="text-base font-black" style={{ color: paceColor }}>₨{Math.round(projected).toLocaleString()}</p><p className="text-white/30 text-[10px]">by month end</p></div>
               </div>
               <div className="space-y-2.5">
                 <div>
@@ -802,21 +843,16 @@ export default function DashboardPage() {
                     <span className="flex items-center gap-1"><CalendarDays size={10} /> Month Progress</span>
                     <span>{daysPassed}/{totalDays} days ({monthProgress}%)</span>
                   </div>
-                  <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                    <div className="h-full bg-white/20 rounded-full" style={{ width: `${monthProgress}%` }} />
-                  </div>
+                  <div className="h-2 bg-white/5 rounded-full overflow-hidden"><div className="h-full bg-white/20 rounded-full" style={{ width: `${monthProgress}%` }} /></div>
                 </div>
                 {budget > 0 && (
                   <div>
                     <div className="flex justify-between text-[10px] text-white/35 mb-1">
                       <span>Budget Used</span>
-                      <span style={{ color: paceColor }}>
-                        ₨{Number(stats?.monthly_expenses || 0).toLocaleString()} / ₨{Number(budget).toLocaleString()}
-                      </span>
+                      <span style={{ color: paceColor }}>₨{Number(stats?.monthly_expenses || 0).toLocaleString()} / ₨{Number(budget).toLocaleString()}</span>
                     </div>
                     <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${spendProgress}%` }}
-                        transition={{ duration: 0.9, ease: 'easeOut' }}
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${spendProgress}%` }} transition={{ duration: 0.9, ease: 'easeOut' }}
                         className="h-full rounded-full" style={{ background: paceColor }} />
                     </div>
                   </div>
@@ -826,36 +862,25 @@ export default function DashboardPage() {
           )
         })()}
 
-        {/* Notifications */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }} className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="relative">
-                <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
-                  <Bell size={16} className="text-white" />
-                </div>
+                <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25"><Bell size={16} className="text-white" /></div>
                 {(notifications?.filter((n: any) => !n.is_read)?.length || 0) > 0 && (
                   <span className="absolute -top-1 -right-1 w-4 h-4 bg-danger text-white text-[9px] font-bold rounded-full flex items-center justify-center leading-none">
                     {notifications.filter((n: any) => !n.is_read).length}
                   </span>
                 )}
               </div>
-              <div>
-                <h2 className="font-bold text-sm">Notifications</h2>
-                <p className="text-white/35 text-xs">Alerts & reminders</p>
-              </div>
+              <div><h2 className="font-bold text-sm">Notifications</h2><p className="text-white/35 text-xs">Alerts & reminders</p></div>
             </div>
             {notifications?.some((n: any) => !n.is_read) && (
-              <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending}
-                className="text-[10px] text-primary hover:text-secondary transition-colors font-medium">
-                Mark all read
-              </button>
+              <button onClick={() => markAllReadMutation.mutate()} disabled={markAllReadMutation.isPending} className="text-[10px] text-primary hover:text-secondary transition-colors font-medium">Mark all read</button>
             )}
           </div>
           {!notifications || notifications.length === 0 ? (
-            <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2">
-              <BellOff size={24} /><p className="text-xs">No notifications yet</p>
-            </div>
+            <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2"><BellOff size={24} /><p className="text-xs">No notifications yet</p></div>
           ) : (
             <div className="space-y-2 max-h-52 overflow-y-auto pr-1">
               {notifications.slice(0, 6).map((n: any, i: number) => {
@@ -866,16 +891,13 @@ export default function DashboardPage() {
                 return (
                   <motion.div key={n.id} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.04 }}
                     className={`flex items-start gap-3 p-2.5 rounded-xl border transition-colors ${n.is_read ? 'border-transparent opacity-50' : 'border-white/6 bg-white/[0.025]'}`}>
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                      style={{ background: color + '20' }}>
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5" style={{ background: color + '20' }}>
                       <IconComp size={13} style={{ color }} />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-semibold text-white/80 leading-tight">{n.title}</p>
                       <p className="text-[10px] text-white/40 mt-0.5 leading-relaxed">{n.message}</p>
-                      <p className="text-[9px] text-white/20 mt-1">
-                        {new Date(n.created_at).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <p className="text-[9px] text-white/20 mt-1">{new Date(n.created_at).toLocaleDateString('en-PK', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
                     </div>
                     {!n.is_read && <div className="w-2 h-2 rounded-full bg-primary flex-shrink-0 mt-1.5" />}
                   </motion.div>
@@ -886,29 +908,18 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* ── NEW Row: Top 5 Expenses + Weekly Spending ── */}
+      {/* Top 5 Expenses + Weekly Spending */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 mb-5">
-
-        {/* Top 5 Expenses this month */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.52 }} className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-danger to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-danger/25">
-                <Trophy size={16} className="text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-sm">Top 5 Expenses</h2>
-                <p className="text-white/35 text-xs">Biggest spends this month</p>
-              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-danger to-rose-600 rounded-xl flex items-center justify-center shadow-lg shadow-danger/25"><Trophy size={16} className="text-white" /></div>
+              <div><h2 className="font-bold text-sm">Top 5 Expenses</h2><p className="text-white/35 text-xs">Biggest spends this month</p></div>
             </div>
-            <Link to="/dashboard/expenses" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">
-              View All <ArrowUpRight size={11} />
-            </Link>
+            <Link to="/dashboard/expenses" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">View All <ArrowUpRight size={11} /></Link>
           </div>
           {!topExpenses || topExpenses.length === 0 ? (
-            <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2">
-              <DollarSign size={24} /><p className="text-xs">No expenses this month</p>
-            </div>
+            <div className="h-32 flex flex-col items-center justify-center text-white/20 gap-2"><DollarSign size={24} /><p className="text-xs">No expenses this month</p></div>
           ) : (
             <div className="space-y-2.5">
               {topExpenses.map((exp: any, i: number) => {
@@ -921,18 +932,13 @@ export default function DashboardPage() {
                       <span className="text-white/30 text-xs font-bold w-4 text-center">#{i + 1}</span>
                       <span className="text-base w-6 text-center">{CAT_EMOJIS[exp.category] || '💼'}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-white/75 truncate">
-                          {exp.description || exp.category}
-                        </p>
+                        <p className="text-xs font-medium text-white/75 truncate">{exp.description || exp.category}</p>
                         <p className="text-[10px] text-white/30">{exp.date} · <span className="capitalize">{exp.category}</span></p>
                       </div>
-                      <span className="text-sm font-bold text-danger flex-shrink-0">
-                        ₨{Number(exp.amount).toLocaleString()}
-                      </span>
+                      <span className="text-sm font-bold text-danger flex-shrink-0">₨{Number(exp.amount).toLocaleString()}</span>
                     </div>
                     <div className="ml-13 pl-9 h-1 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.7, delay: 0.6 + i * 0.05, ease: 'easeOut' }}
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.7, delay: 0.6 + i * 0.05, ease: 'easeOut' }}
                         className="h-full rounded-full" style={{ background: color }} />
                     </div>
                   </motion.div>
@@ -942,27 +948,18 @@ export default function DashboardPage() {
           )}
         </motion.div>
 
-        {/* Weekly Spending Comparison */}
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.54 }} className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-secondary to-primary rounded-xl flex items-center justify-center shadow-lg shadow-secondary/25">
-                <CalendarDays size={16} className="text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-sm">Weekly Spending</h2>
-                <p className="text-white/35 text-xs">This week vs last week</p>
-              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-secondary to-primary rounded-xl flex items-center justify-center shadow-lg shadow-secondary/25"><CalendarDays size={16} className="text-white" /></div>
+              <div><h2 className="font-bold text-sm">Weekly Spending</h2><p className="text-white/35 text-xs">This week vs last week</p></div>
             </div>
             {weeklyData.change !== 0 && (
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${weeklyData.change <= 0
-                ? 'bg-success/10 text-success'
-                : 'bg-danger/10 text-danger'}`}>
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-lg ${weeklyData.change <= 0 ? 'bg-success/10 text-success' : 'bg-danger/10 text-danger'}`}>
                 {weeklyData.change >= 0 ? '+' : ''}{weeklyData.change.toFixed(0)}%
               </span>
             )}
           </div>
-
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div className="glass p-4 rounded-xl text-center border border-white/5">
               <p className="text-white/35 text-[10px] mb-1.5">This Week</p>
@@ -975,70 +972,51 @@ export default function DashboardPage() {
               <p className="text-white/25 text-[10px] mt-1">7–14 days ago</p>
             </div>
           </div>
-
           <ResponsiveContainer width="100%" height={110}>
             <BarChart data={[
-              { name: 'Last Week', value: weeklyData.lastWeek, fill: 'rgba(255,255,255,0.15)' },
-              { name: 'This Week', value: weeklyData.thisWeek, fill: weeklyData.change <= 0 ? '#10B981' : '#EF4444' },
+              { name: 'Last Week', value: weeklyData.lastWeek },
+              { name: 'This Week', value: weeklyData.thisWeek },
             ]} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
               <XAxis dataKey="name" tick={{ fill: 'rgba(255,255,255,0.35)', fontSize: 10 }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 9 }} axisLine={false} tickLine={false}
-                tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
+              <YAxis tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
               <Tooltip formatter={(v: any) => [`₨${Number(v).toLocaleString()}`, 'Spent']}
                 contentStyle={{ background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', fontSize: '11px' }} />
               <Bar dataKey="value" radius={[6, 6, 0, 0]} maxBarSize={48}>
-                {[weeklyData.lastWeek, weeklyData.thisWeek].map((_, i) => (
-                  <Cell key={i} fill={i === 0 ? 'rgba(255,255,255,0.15)' : weeklyData.change <= 0 ? '#10B981' : '#EF4444'} />
-                ))}
+                <Cell fill="rgba(255,255,255,0.15)" />
+                <Cell fill={weeklyData.change <= 0 ? '#10B981' : '#EF4444'} />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-
           <p className="text-[10px] text-white/20 mt-3 text-center">
-            {weeklyData.change <= 0
-              ? `✓ Spending down ${Math.abs(weeklyData.change).toFixed(0)}% vs last week`
-              : `↑ Spending up ${weeklyData.change.toFixed(0)}% vs last week`}
+            {weeklyData.change <= 0 ? `✓ Spending down ${Math.abs(weeklyData.change).toFixed(0)}% vs last week` : `↑ Spending up ${weeklyData.change.toFixed(0)}% vs last week`}
           </p>
         </motion.div>
       </div>
 
-      {/* ── NEW: Income Sources Breakdown ── */}
+      {/* Income Sources Breakdown */}
       {incomeBySource.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.56 }} className="card mb-5">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-success to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-success/25">
-                <Layers size={16} className="text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-sm">Income Sources</h2>
-                <p className="text-white/35 text-xs">Where your money comes from this month</p>
-              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-success to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-success/25"><Layers size={16} className="text-white" /></div>
+              <div><h2 className="font-bold text-sm">Income Sources</h2><p className="text-white/35 text-xs">Where your money comes from this month</p></div>
             </div>
-            <Link to="/dashboard/income" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">
-              View All <ArrowUpRight size={11} />
-            </Link>
+            <Link to="/dashboard/income" className="text-[10px] text-primary hover:text-secondary transition-colors flex items-center gap-1">View All <ArrowUpRight size={11} /></Link>
           </div>
-
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={incomeBySource} layout="vertical" margin={{ top: 0, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" horizontal={false} />
-                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false}
-                  tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
-                <YAxis type="category" dataKey="source" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} width={72}
-                  tickFormatter={(s: string) => `${SOURCE_EMOJIS[s] || '💰'} ${s}`} axisLine={false} tickLine={false} />
+                <XAxis type="number" tick={{ fill: 'rgba(255,255,255,0.3)', fontSize: 10 }} axisLine={false} tickLine={false} tickFormatter={v => `₨${(v / 1000).toFixed(0)}k`} />
+                <YAxis type="category" dataKey="source" tick={{ fill: 'rgba(255,255,255,0.4)', fontSize: 11 }} width={72} tickFormatter={(s: string) => `${SOURCE_EMOJIS[s] || '💰'} ${s}`} axisLine={false} tickLine={false} />
                 <Tooltip formatter={(v: any) => [`₨${Number(v).toLocaleString()}`, 'Income']}
                   contentStyle={{ background: '#1E293B', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '10px', color: '#fff', fontSize: '11px' }} />
                 <Bar dataKey="total" radius={[0, 6, 6, 0]} maxBarSize={22}>
-                  {incomeBySource.map((entry, i) => (
-                    <Cell key={i} fill={SOURCE_COLORS[entry.source] || COLORS[i % COLORS.length]} />
-                  ))}
+                  {incomeBySource.map((entry, i) => <Cell key={i} fill={SOURCE_COLORS[entry.source] || COLORS[i % COLORS.length]} />)}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-
             <div className="space-y-3">
               {incomeBySource.map((src, i) => {
                 const total = incomeBySource.reduce((s, x) => s + x.total, 0)
@@ -1057,8 +1035,7 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }}
-                        transition={{ duration: 0.8, delay: 0.65 + i * 0.07, ease: 'easeOut' }}
+                      <motion.div initial={{ width: 0 }} animate={{ width: `${pct}%` }} transition={{ duration: 0.8, delay: 0.65 + i * 0.07, ease: 'easeOut' }}
                         className="h-full rounded-full" style={{ background: color }} />
                     </div>
                   </motion.div>
@@ -1069,28 +1046,45 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ── AI Quick Insights ── */}
+      {/* Currency Rates */}
+      {currencies.length > 0 && (
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.58 }} className="card mb-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
+                <Globe2 size={16} className="text-white" />
+              </div>
+              <div><h2 className="font-bold text-sm">Live Exchange Rates</h2><p className="text-white/35 text-xs">PKR equivalent today</p></div>
+            </div>
+            <span className="text-[10px] text-white/20">Auto-updates hourly</span>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {currencies.map((c, i) => (
+              <motion.div key={c.code} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6 + i * 0.05 }}
+                className="glass p-3.5 rounded-xl border border-white/5 text-center">
+                <span className="text-2xl block mb-1">{c.flag}</span>
+                <p className="text-xs font-bold text-white/60">{c.code}</p>
+                <p className="text-lg font-black mt-0.5">₨{c.rate.toLocaleString()}</p>
+                <p className="text-[9px] text-white/25 mt-0.5">per 1 {c.code}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* AI Quick Insights */}
       {aiInsights?.insights?.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }} className="card">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-secondary to-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
-                <Brain size={16} className="text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-sm">AI Quick Insights</h2>
-                <p className="text-white/35 text-xs">Based on your spending patterns</p>
-              </div>
+              <div className="w-9 h-9 bg-gradient-to-br from-secondary to-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20"><Brain size={16} className="text-white" /></div>
+              <div><h2 className="font-bold text-sm">AI Quick Insights</h2><p className="text-white/35 text-xs">Based on your spending patterns</p></div>
             </div>
-            <Link to="/dashboard/ai-insights"
-              className="text-primary text-xs hover:text-secondary transition-colors flex items-center gap-1 font-medium">
-              Full Analysis <ArrowUpRight size={12} />
-            </Link>
+            <Link to="/dashboard/ai-insights" className="text-primary text-xs hover:text-secondary transition-colors flex items-center gap-1 font-medium">Full Analysis <ArrowUpRight size={12} /></Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             {aiInsights.insights.slice(0, 4).map((insight: string, i: number) => (
-              <motion.div key={i} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.65 + i * 0.06 }}
+              <motion.div key={i} initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.65 + i * 0.06 }}
                 className="glass p-3.5 rounded-xl border border-primary/12 hover:border-primary/25 transition-colors">
                 <span className="text-base block mb-1.5">💡</span>
                 <p className="text-xs text-white/65 leading-relaxed">{insight}</p>
@@ -1100,31 +1094,19 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* ── Empty State ── */}
+      {/* Empty State */}
       {!stats?.monthly_income && !stats?.monthly_expenses && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }}
-          className="card text-center py-12 mt-5">
-          <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20">
-            <Zap size={28} className="text-primary" />
-          </div>
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.4 }} className="card text-center py-12 mt-5">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20"><Zap size={28} className="text-primary" /></div>
           <h3 className="font-bold text-lg mb-2">Get Started!</h3>
-          <p className="text-white/40 text-sm mb-6 max-w-sm mx-auto">
-            Add your first income or expense to unlock all dashboard features, charts, and AI insights.
-          </p>
+          <p className="text-white/40 text-sm mb-6 max-w-sm mx-auto">Add your first income or expense to unlock all dashboard features, charts, and AI insights.</p>
           <div className="flex gap-3 justify-center">
-            <button onClick={() => setQuickAdd('income')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-success to-emerald-600">
-              <Plus size={15} /> Add Income
-            </button>
-            <button onClick={() => setQuickAdd('expense')}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-danger to-rose-600">
-              <Plus size={15} /> Add Expense
-            </button>
+            <button onClick={() => setQuickAdd('income')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-success to-emerald-600"><Plus size={15} /> Add Income</button>
+            <button onClick={() => setQuickAdd('expense')} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-danger to-rose-600"><Plus size={15} /> Add Expense</button>
           </div>
         </motion.div>
       )}
 
-      {/* ── Quick Add Modal ── */}
       <AnimatePresence>
         {quickAdd && <QuickAddModal type={quickAdd} onClose={() => setQuickAdd(null)} />}
       </AnimatePresence>

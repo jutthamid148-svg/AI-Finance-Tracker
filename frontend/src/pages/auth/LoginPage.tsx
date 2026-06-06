@@ -39,11 +39,11 @@ export default function LoginPage() {
       toast.success('Welcome back! 🎉')
       navigate('/dashboard')
     } catch (err: any) {
-      const msg =
-        err?.message ||
-        err?.response?.data?.detail ||
-        err?.response?.data?.non_field_errors?.[0] ||
-        'Invalid email or password'
+      const d = err?.response?.data
+      const msg = d
+        ? (d.detail || d.non_field_errors?.[0] ||
+            (typeof d === 'object' ? (Object.values(d).flat()[0] as string) : String(d)))
+        : (err?.message || 'Invalid email or password')
       toast.error(msg, { duration: 5000 })
     }
   }

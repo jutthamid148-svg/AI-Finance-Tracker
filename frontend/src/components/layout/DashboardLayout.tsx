@@ -11,6 +11,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { authAPI } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
+import AIChatBot from '../AIChatBot'
 
 const TYPE_ICON: Record<string, { icon: any; color: string; bg: string }> = {
   budget_exceeded: { icon: AlertTriangle, color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
@@ -377,6 +378,9 @@ export default function DashboardLayout() {
           </AnimatePresence>
         </main>
       </div>
+
+      {/* ── AI Chatbot floating button (har page pr) ── */}
+      <AIChatBot />
     </div>
   )
 }

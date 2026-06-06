@@ -30,13 +30,12 @@ export default function RegisterPage() {
       toast.success('Account created! Welcome to AI Finance Tracker 🎉')
       navigate('/dashboard')
     } catch (err: any) {
-      const msg =
-        err?.message ||
-        (err?.response?.data
-          ? (typeof err.response.data === 'object'
-              ? (Object.values(err.response.data).flat()[0] as string)
-              : err.response.data)
-          : 'Registration failed')
+      const d = err?.response?.data
+      const msg = d
+        ? (typeof d === 'object'
+            ? (Object.values(d).flat()[0] as string)
+            : String(d))
+        : (err?.message || 'Registration failed')
       toast.error(msg, { duration: 5000 })
     }
   }
