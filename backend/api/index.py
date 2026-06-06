@@ -14,6 +14,8 @@ CORS_HEADERS = [
      'Authorization, Content-Type, Accept, X-CSRFToken, X-Requested-With'),
     ('Access-Control-Allow-Credentials', 'true'),
     ('Access-Control-Max-Age', '86400'),
+    ('Cross-Origin-Opener-Policy', 'unsafe-none'),
+    ('Cross-Origin-Embedder-Policy', 'unsafe-none'),
 ]
 
 _init_error = None
