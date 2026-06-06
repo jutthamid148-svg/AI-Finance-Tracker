@@ -97,7 +97,8 @@ if _database_url:
             'PASSWORD': _urlparse.unquote(_u.password or ''),
             'HOST':     _u.hostname,
             'PORT':     str(_u.port or 5432),
-            'OPTIONS':  {'sslmode': 'require'},
+            'OPTIONS':  {'sslmode': 'require', 'connect_timeout': 10},
+            'CONN_MAX_AGE': 60,
         }
     }
 elif not _use_sqlite and os.getenv('DB_HOST', ''):
