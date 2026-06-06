@@ -2,9 +2,19 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
+from django.utils import timezone
+
+def health_check(request):
+    return JsonResponse({
+        'status': 'ok',
+        'timestamp': timezone.now().isoformat(),
+        'service': 'AI Finance Tracker API',
+    })
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health/', health_check),
     path('api/auth/', include('users.urls')),
     path('api/transactions/', include('transactions.urls')),
     path('api/budgets/', include('budgets.urls')),

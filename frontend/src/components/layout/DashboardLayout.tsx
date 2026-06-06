@@ -12,6 +12,7 @@ import { authAPI } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
 import AIChatBot from '../AIChatBot'
+import ThemeToggle from '../ui/ThemeToggle'
 
 const TYPE_ICON: Record<string, { icon: any; color: string; bg: string }> = {
   budget_exceeded: { icon: AlertTriangle, color: '#EF4444', bg: 'rgba(239,68,68,0.12)' },
@@ -325,6 +326,7 @@ export default function DashboardLayout() {
 
           {/* Right side */}
           <div className="flex items-center gap-2 ml-auto">
+            <ThemeToggle size="sm" />
             <div className="relative">
               <button
                 onClick={() => setNotifOpen(o => !o)}

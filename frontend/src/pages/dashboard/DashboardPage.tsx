@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
@@ -16,6 +16,8 @@ import {
   Globe2, Hash, Calculator, Volume2, VolumeX, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI } from '../../services/api'
+import { SkeletonDashboard } from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
@@ -171,7 +173,7 @@ export default function DashboardPage() {
   const currentMonth = now.getMonth() + 1
   const currentYear = now.getFullYear()
 
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => authAPI.dashboardStats().then(r => r.data) })
+  const { data: stats, isLoading: statsLoading, isError: statsError, refetch: refetchStats } = useQuery({ queryKey: ['dashboard-stats'], queryFn: () => authAPI.dashboardStats().then(r => r.data) })
   const { data: monthlyData } = useQuery({ queryKey: ['monthly-chart'], queryFn: () => transactionAPI.monthlyChart().then(r => r.data) })
   const { data: categoryData } = useQuery({ queryKey: ['category-chart'], queryFn: () => transactionAPI.categoryChart().then(r => r.data) })
   const { data: recentExpenses } = useQuery({ queryKey: ['recent-transactions', 'expenses'], queryFn: () => transactionAPI.expenseList().then(r => (r.data.results || r.data).slice(0, 5)) })
@@ -324,6 +326,9 @@ export default function DashboardPage() {
 
   const stagger = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.07 } } }
   const fadeUp = { hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0, transition: { duration: 0.4 } } }
+
+  if (statsLoading) return <div className="p-5 md:p-6 max-w-7xl mx-auto"><SkeletonDashboard /></div>
+  if (statsError) return <div className="p-5 md:p-6 max-w-7xl mx-auto"><ErrorState type="network" onRetry={() => refetchStats()} /></div>
 
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto">

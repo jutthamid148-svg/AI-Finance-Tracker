@@ -7,6 +7,7 @@ import {
   PieChart, Bell, Lock, Smartphone, Sparkles,
   ShieldCheck, Globe, Activity, ChevronLeft,
 } from 'lucide-react'
+import ThemeToggle from '../components/ui/ThemeToggle'
 
 // ── Animated counter ─────────────────────────────────────────────────────────
 function useCounter(end: number, duration = 2200) {
@@ -418,6 +419,7 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center gap-2.5">
+            <ThemeToggle size="sm" />
             <Link to="/login" className="text-sm text-white/50 hover:text-white transition-colors px-4 py-2">
               Sign In
             </Link>

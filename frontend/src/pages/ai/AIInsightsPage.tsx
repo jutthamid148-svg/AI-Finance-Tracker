@@ -1,5 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
+import { SkeletonAIInsights } from '../../components/ui/Skeleton'
+import ErrorState from '../../components/ui/ErrorState'
 import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   PieChart, Pie, ComposedChart,
@@ -202,7 +204,7 @@ function BudgetRuleBar({ label, pct, amount, color, target }: {
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
 
-  const { data: insights, isLoading: insightsLoading, error: insightsError } = useQuery({
+  const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: () => aiAPI.insights().then(r => r.data),
   })
@@ -382,10 +384,14 @@ export default function AIInsightsPage() {
       </motion.div>
 
       {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-28 gap-3">
-          <div className="w-10 h-10 rounded-full border-2 border-primary/20 border-t-primary animate-spin" />
-          <p className="text-white/35 text-sm">Analyzing your financial data...</p>
-        </div>
+        <SkeletonAIInsights />
+      ) : insightsError ? (
+        <ErrorState
+          type="server"
+          title="AI Analysis Unavailable"
+          message="Could not load your AI insights. The ML engine may be starting up. Please try again."
+          onRetry={() => refetchInsights()}
+        />
       ) : (
         <div className="space-y-5">
 

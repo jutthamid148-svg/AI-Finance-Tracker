@@ -1,8 +1,12 @@
 # Frontend
 frontend/node_modules/
 frontend/dist/
+frontend/.env
 frontend/.env.local
 frontend/.env*.local
+frontend/.env.production.local
+frontend/screenshot.cjs
+frontend/src/pages/LandingPage.tsx.bak
 
 # Backend
 backend/__pycache__/

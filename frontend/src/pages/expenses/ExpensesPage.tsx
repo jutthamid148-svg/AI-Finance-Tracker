@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { SkeletonExpenses } from '../../components/ui/Skeleton'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -321,7 +322,7 @@ export default function ExpensesPage() {
 
       {/* List */}
       {isLoading ? (
-        <div className="flex justify-center py-16"><div className="spinner" /></div>
+        <SkeletonExpenses />
       ) : filtered.length === 0 ? (
         <div className="card text-center py-12">
           <TrendingDown size={36} className="text-white/15 mx-auto mb-3" />
