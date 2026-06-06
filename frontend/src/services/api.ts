@@ -1,8 +1,6 @@
 import axios from 'axios'
 
-const _envUrl = import.meta.env.VITE_API_URL || ''
-// Strip BOM character (﻿) that PowerShell echo can inject into env vars
-const API_BASE_URL = _envUrl.replace(/^﻿/, '') || 'http://localhost:8000/api'
+const API_BASE_URL = 'https://backend-jade-eight-14.vercel.app/api'
 
 const api = axios.create({
   baseURL: API_BASE_URL,
