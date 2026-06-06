@@ -26,15 +26,7 @@ try:
 except Exception:
     _init_error = traceback.format_exc()
 
-# Step 2: Run migrations (non-fatal — ignore if tables already exist)
-if _init_error is None:
-    try:
-        from django.core.management import call_command
-        call_command('migrate', verbosity=0, interactive=False)
-    except Exception:
-        pass  # Duplicate key / already migrated — safe to ignore
-
-# Step 3: Build WSGI app
+# Step 2: Build WSGI app
 if _init_error is None:
     try:
         from django.core.wsgi import get_wsgi_application
