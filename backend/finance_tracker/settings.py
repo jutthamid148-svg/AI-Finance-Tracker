@@ -2,11 +2,18 @@
 Django Settings for AI Finance Tracker
 """
 import os
+import socket as _socket
 from pathlib import Path
 from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
+
+# Force IPv4 for all outgoing connections (Railway doesn't support IPv6 to Supabase)
+_orig_getaddrinfo = _socket.getaddrinfo
+def _ipv4_only(host, port, family=0, type=0, proto=0, flags=0):
+    return _orig_getaddrinfo(host, port, _socket.AF_INET, type, proto, flags)
+_socket.getaddrinfo = _ipv4_only
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
