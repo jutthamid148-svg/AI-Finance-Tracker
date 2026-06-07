@@ -44,14 +44,18 @@ function StatCounter({ value, suffix, label, prefix = '' }: {
 }
 
 // ── Floating particle ─────────────────────────────────────────────────────────
-function Particle({ style }: { style: React.CSSProperties }) {
+const FINANCE_SYMBOLS = ['₨', '%', '$', '📈', '💰', '📊', '🏦', '💹', '₨', '%', '📈', '💰']
+
+function FloatingSymbol({ symbol, style, delay }: { symbol: string; style: React.CSSProperties; delay: number }) {
   return (
     <motion.div
-      className="absolute rounded-full pointer-events-none"
-      style={{ ...style, background: 'rgba(99,102,241,0.4)' }}
-      animate={{ y: [0, -30, 0], opacity: [0.2, 0.6, 0.2] }}
-      transition={{ duration: 4 + Math.random() * 3, repeat: Infinity, ease: 'easeInOut', delay: Math.random() * 3 }}
-    />
+      className="absolute pointer-events-none select-none font-bold"
+      style={{ ...style, color: 'rgba(99,102,241,0.18)', fontSize: style.fontSize || '14px' }}
+      animate={{ y: [0, -40, 0], opacity: [0.08, 0.22, 0.08], rotate: [-5, 5, -5] }}
+      transition={{ duration: 6 + delay * 1.5, repeat: Infinity, ease: 'easeInOut', delay }}
+    >
+      {symbol}
+    </motion.div>
   )
 }
 
@@ -330,15 +334,16 @@ const techStack = [
   { name: 'Recharts',      icon: '📊',  desc: 'Charts' },
 ]
 
-const particles = Array.from({ length: 18 }, (_, i) => ({
+const SYMBOL_SIZES = ['12px', '14px', '16px', '18px', '20px', '22px']
+const financeParticles = Array.from({ length: 22 }, (_, i) => ({
   id: i,
+  symbol: FINANCE_SYMBOLS[i % FINANCE_SYMBOLS.length],
   style: {
-    width: `${2 + Math.random() * 3}px`,
-    height: `${2 + Math.random() * 3}px`,
-    left: `${Math.random() * 100}%`,
-    top: `${Math.random() * 100}%`,
-    opacity: 0.3,
-  }
+    left: `${(i * 4.5 + Math.random() * 5) % 100}%`,
+    top: `${(i * 4.1 + Math.random() * 5) % 95}%`,
+    fontSize: SYMBOL_SIZES[i % SYMBOL_SIZES.length],
+  },
+  delay: (i * 0.4) % 5,
 }))
 
 // ── Page ─────────────────────────────────────────────────────────────────────
@@ -384,8 +389,10 @@ export default function LandingPage() {
           backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)`,
           backgroundSize: '32px 32px',
         }} />
-        {/* Floating particles */}
-        {particles.map(p => <Particle key={p.id} style={p.style} />)}
+        {/* Floating finance symbols */}
+        {financeParticles.map(p => (
+          <FloatingSymbol key={p.id} symbol={p.symbol} style={p.style} delay={p.delay} />
+        ))}
       </div>
 
       {/* ── Navbar ── */}
