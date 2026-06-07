@@ -486,63 +486,296 @@ class FinanceAnalyzer:
         }
 
     # ──────────────────────────────────────────────────────────────────────────
+    def _fmt(self, amount):
+        return f"₨{amount:,.0f}"
+
     def chat_response(self, question):
         """Generate intelligent AI chat responses about user's finances"""
         q = question.lower()
-        analysis = self.get_spending_analysis()
-        predictions = self.predict_next_month_expenses()
+
+        # Lazy-load all data once
+        analysis      = self.get_spending_analysis()
+        predictions   = self.predict_next_month_expenses()
         recommendations = self.generate_recommendations()
-        overspending = self.detect_overspending()
+        overspending  = self.detect_overspending()
+        health        = self.get_financial_health_score()
+        savings_pred  = self.predict_savings()
 
-        if any(w in q for w in ['save', 'saving', 'more money', 'savings']):
-            response = "💡 **How to Save More Money**\n\nBased on your spending patterns:\n\n"
-            for rec in recommendations[:3]:
-                response += f"• {rec}\n"
-            sav = self.predict_savings()
-            if sav.get('predictions'):
-                response += f"\n📈 Predicted savings next month: **₨{sav['predicted_savings']:,.0f}**"
+        total_exp     = analysis.get('total_expenses', 0)
+        monthly_inc   = analysis.get('monthly_income', 0)
+        savings_rate  = analysis.get('savings_rate', 0)
+        cat_breakdown = analysis.get('category_breakdown', [])
 
-        elif any(w in q for w in ['most', 'highest', 'expensive', 'top spending', 'costs most']):
-            if analysis['category_breakdown']:
-                top = analysis['category_breakdown'][0]
-                response = f"📊 **Highest Spending Category**\n\n**{top['category'].capitalize()}** — ₨{top['amount']:,.0f} ({top['percentage']}%)\n\n**Full breakdown:**\n"
-                for item in analysis['category_breakdown'][:5]:
-                    response += f"• {item['category'].capitalize()}: ₨{item['amount']:,.0f} ({item['percentage']}%)\n"
+        # ── Greetings / help ──────────────────────────────────────────────
+        if any(w in q for w in ['hello', 'hi', 'hey', 'help', 'kya kar', 'what can']):
+            return (
+                "👋 **Assalam o Alaikum! Main aapka AI Finance Assistant hoon.**\n\n"
+                "Main aapki in chezon mein madad kar sakta hoon:\n\n"
+                "💰 Paisa kaise bachayein?\n"
+                "📊 Sabse zyada kahan kharcha ho raha hai?\n"
+                "🔮 Agla mahina kitna kharcha hoga?\n"
+                "⚠️ Kahan overspend ho raha hoon?\n"
+                "🏆 Mera financial health score kya hai?\n"
+                "📉 Kharcha kaise kam karein?\n"
+                "🎯 Savings goal kaise poora karein?\n"
+                "💳 Budget tips?\n\n"
+                "Koi bhi sawal poochein — main aapki real data se jawab dunga! 🤖"
+            )
+
+        # ── How to save money ─────────────────────────────────────────────
+        if any(w in q for w in ['save', 'saving', 'bachaon', 'bachao', 'paisa bacha', 'savings', 'kam karo', 'reduce', 'cut']):
+            resp = "💡 **Paisa Bachane ke Tarike — Aapki Data ke Mutabiq:**\n\n"
+
+            if monthly_inc > 0 and savings_rate < 20:
+                needed = monthly_inc * 0.20 - max(monthly_inc - total_exp, 0)
+                resp += f"📌 Abhi aap {savings_rate:.0f}% save kar rahe hain. 20% target ke liye {self._fmt(max(needed,0))} aur bachana hoga.\n\n"
+
+            if recommendations:
+                resp += "**Personalized Tips:**\n"
+                for rec in recommendations:
+                    resp += f"• {rec}\n"
             else:
-                response = "No expense data available yet. Start adding your expenses!"
+                resp += (
+                    "**General Tips:**\n"
+                    "• 🍳 Ghar ka khana khayein — restaurant se 30-40% bachta hai\n"
+                    "• 📱 Subscriptions review karein — koi unnecessary nahi?\n"
+                    "• 🛍️ 24-ghante rule: Koi cheez khareedne se pehle ek din sochein\n"
+                    "• ⚡ Bijli/paani ka bill kam karein — AC temperature 1-2 degree badhayein\n"
+                    "• 🚌 Haftay mein 2-3 baar public transport use karein\n"
+                )
 
-        elif any(w in q for w in ['next month', 'predict', 'future', 'forecast', 'expected']):
-            response = f"🔮 **Next Month Expense Forecast**\n\nPredicted: **₨{predictions['prediction']:,.0f}** ({predictions['confidence'].upper()} confidence)\n\n"
+            if savings_pred.get('predicted_savings', 0) > 0:
+                resp += f"\n📈 **Predicted savings next month: {self._fmt(savings_pred['predicted_savings'])}**"
+                if savings_pred.get('predictions'):
+                    cum = savings_pred['predictions'][-1].get('cumulative_savings', 0) if len(savings_pred['predictions']) >= 6 else 0
+                    if cum > 0:
+                        resp += f"\n🎯 6 mahinon mein {self._fmt(cum)} jama ho sakta hai!"
+            return resp
+
+        # ── Highest / top spending category ──────────────────────────────
+        if any(w in q for w in ['most', 'highest', 'sabse zyada', 'top', 'costs most', 'biggest', 'maximum', 'bari category', 'costly']):
+            if cat_breakdown:
+                top = cat_breakdown[0]
+                resp = (
+                    f"📊 **Sabse Badi Expense Category:**\n\n"
+                    f"🥇 **{top['category'].capitalize()}** — {self._fmt(top['amount'])} "
+                    f"({top['percentage']}% of total spending"
+                )
+                if monthly_inc > 0:
+                    resp += f", {top['percentage_of_income']}% of income"
+                resp += ")\n\n**Poora Breakdown:**\n"
+                for i, item in enumerate(cat_breakdown[:6]):
+                    bar = '█' * max(1, int(item['percentage'] / 5))
+                    resp += f"{i+1}. {item['category'].capitalize()}: {self._fmt(item['amount'])} {bar} {item['percentage']}%\n"
+                if top['percentage'] > 35:
+                    resp += f"\n⚠️ {top['category'].capitalize()} pe bahut zyada kharcha hai — thoda kam karein!"
+            else:
+                resp = "Abhi koi expense data nahi hai. Pehle transactions add karein!"
+            return resp
+
+        # ── Forecast / predictions ────────────────────────────────────────
+        if any(w in q for w in ['next month', 'predict', 'forecast', 'future', 'expected', 'agla', 'agle mahine', 'kitna hoga', 'aney wala']):
+            resp = (
+                f"🔮 **Aglay Mahine ka Expense Forecast:**\n\n"
+                f"📍 Predicted: **{self._fmt(predictions['prediction'])}** "
+                f"({predictions['confidence'].upper()} confidence)\n\n"
+            )
             if predictions.get('monthly_predictions'):
-                response += "**3-Month Outlook:**\n"
+                resp += "**3-Month Outlook:**\n"
                 for m in predictions['monthly_predictions']:
-                    response += f"• {m['month']}: ₨{m['predicted']:,.0f}\n"
+                    resp += f"• {m['month']}: {self._fmt(m['predicted'])}\n"
+            if monthly_inc > 0:
+                next_saving = monthly_inc - predictions['prediction']
+                resp += f"\n💰 Agar income same rahe ({self._fmt(monthly_inc)}), to next month savings: **{self._fmt(max(next_saving,0))}**"
+            resp += f"\n\n📊 _{predictions.get('message', '')}_"
+            return resp
 
-        elif any(w in q for w in ['overspend', 'over budget', 'exceed', 'too much']):
-            response = "⚠️ **Overspending Analysis**\n\n"
-            for alert in overspending['alerts'][:3]:
-                response += f"• {alert}\n"
+        # ── Overspending ──────────────────────────────────────────────────
+        if any(w in q for w in ['overspend', 'over budget', 'exceed', 'too much', 'zyada', 'badh gaya', 'limit', 'budget cross']):
+            resp = "⚠️ **Overspending Analysis:**\n\n"
+            alerts = overspending.get('alerts', [])
+            if alerts and alerts[0] != '✅ Spending is stable compared to last month.':
+                for alert in alerts[:4]:
+                    resp += f"• {alert}\n"
+            else:
+                resp += "✅ Kharcha pichle mahine se stable hai — achha hai!\n"
+            comparison = overspending.get('comparison', [])
+            if comparison:
+                resp += "\n**Month-on-Month Change:**\n"
+                for c in comparison[:4]:
+                    arrow = '📈' if c['change_percentage'] > 0 else '📉'
+                    resp += f"• {c['category'].capitalize()}: {arrow} {abs(c['change_percentage']):.0f}% ({self._fmt(c['previous'])} → {self._fmt(c['current'])})\n"
+            return resp
 
-        elif any(w in q for w in ['income', 'earning', 'salary']):
-            total = float(self.income_df['amount'].sum()) if not self.income_df.empty else 0
-            response = f"💰 **Income Summary**\n\nTotal recorded income: ₨{total:,.0f}"
+        # ── Income ────────────────────────────────────────────────────────
+        if any(w in q for w in ['income', 'earning', 'salary', 'kamai', 'tawana', 'tankhwa', 'amdani']):
+            if not self.income_df.empty:
+                total_all = float(self.income_df['amount'].sum())
+                from django.utils import timezone as tz
+                now = tz.now()
+                this_month = float(self.income_df[
+                    (self.income_df['month'] == now.month) & (self.income_df['year'] == now.year)
+                ]['amount'].sum())
+                sources = self.income_df.groupby('source')['amount'].sum().sort_values(ascending=False)
+                resp = (
+                    f"💰 **Income Summary:**\n\n"
+                    f"• Is mahine: **{self._fmt(this_month)}**\n"
+                    f"• Total (all time): {self._fmt(total_all)}\n\n"
+                    f"**Income Sources:**\n"
+                )
+                for src, amt in sources.head(5).items():
+                    resp += f"• {str(src).capitalize()}: {self._fmt(float(amt))}\n"
+                if this_month > 0 and total_exp > 0:
+                    resp += f"\n📊 Is mahine {self._fmt(total_exp)} kharcha, {self._fmt(max(this_month - total_exp, 0))} bacha."
+            else:
+                resp = "💰 Koi income record nahi hai. Pehle income add karein!"
+            return resp
 
-        elif any(w in q for w in ['score', 'health', 'grade', 'status']):
-            hs = self.get_financial_health_score()
-            response = f"🏆 **Your Financial Health Score: {hs['score']}/100 (Grade {hs['grade']} — {hs['label']})**\n\n"
-            for b in hs['breakdown']:
-                response += f"• {b['metric']}: {b['score']}/{b['max']} — {b['value']}\n"
+        # ── Health score ──────────────────────────────────────────────────
+        if any(w in q for w in ['score', 'health', 'grade', 'status', 'kitna acha', 'financial health', 'rating']):
+            resp = (
+                f"🏆 **Financial Health Score: {health['score']}/100 "
+                f"(Grade {health['grade']} — {health['label']})**\n\n"
+            )
+            for b in health['breakdown']:
+                icon = '✅' if b['status'] in ('good','excellent') else '⚠️' if b['status'] == 'warning' else '❌'
+                resp += f"{icon} {b['metric']}: {b['score']}/{b['max']} — {b['value']}\n"
+            resp += "\n**Score Improve karne ke Tips:**\n"
+            for b in health['breakdown']:
+                if b['status'] == 'bad':
+                    resp += f"• {b['metric']} fix karein — abhi {b['score']}/{b['max']} hai\n"
+                elif b['status'] == 'warning':
+                    resp += f"• {b['metric']} thoda improve karein ({b['value']})\n"
+            if not any(b['status'] in ('bad','warning') for b in health['breakdown']):
+                resp += "• Bohat acha! Sab metrics theek hain 🎉\n"
+            return resp
 
-        elif any(w in q for w in ['hello', 'hi', 'hey', 'help']):
-            response = "👋 **Hello! I'm your AI Finance Assistant.**\n\nI can help you with:\n• 💰 How can I save more money?\n• 📊 Which category costs me the most?\n• 🔮 What's my expected spending next month?\n• ⚠️ Am I overspending anywhere?\n• 🏆 What is my financial health score?\n\nJust ask me anything!"
+        # ── Budget tips ───────────────────────────────────────────────────
+        if any(w in q for w in ['budget', 'plan', 'manage', 'handle', 'tips', 'advice', 'rule', 'formula']):
+            resp = "📋 **Budget Tips — Aapke Liye Personalized:**\n\n"
+            if monthly_inc > 0:
+                resp += (
+                    f"**50/30/20 Rule ({self._fmt(monthly_inc)} income ke liye):**\n"
+                    f"• 🏠 Zaroorat (50%): {self._fmt(monthly_inc * 0.50)} — rent, khana, transport\n"
+                    f"• 🎉 Chahaton (30%): {self._fmt(monthly_inc * 0.30)} — entertainment, shopping\n"
+                    f"• 💰 Savings (20%): {self._fmt(monthly_inc * 0.20)} — emergency fund, invest\n\n"
+                )
+                if total_exp > 0:
+                    resp += f"**Abhi ka haal:** {self._fmt(total_exp)} kharcha ({savings_rate:.0f}% savings rate)\n\n"
+            resp += (
+                "**Practical Budget Hacks:**\n"
+                "• 💵 Mahine ki shuruat mein hi savings alag kar lein (pay yourself first)\n"
+                "• 📝 Weekly expense review karein — sirf 5 minute\n"
+                "• 🏦 Emergency fund: kam az kam 3 mahine ka kharcha\n"
+                "• 📱 Apps use karein (jaise yeh!) — tracking se 15-20% kharcha automatic kam hota hai\n"
+                "• 🛒 Grocery list bana ke jayein — impulse buying se bachein\n"
+            )
+            return resp
 
-        else:
-            response = "💬 **Financial Summary**\n\n"
-            if analysis['insights']:
+        # ── Specific category queries ─────────────────────────────────────
+        for cat_kw, cat_key in [
+            (['food', 'khana', 'restaurant', 'groceries'], 'food'),
+            (['transport', 'petrol', 'fuel', 'car', 'ride', 'safar'], 'transport'),
+            (['entertainment', 'cinema', 'movies', 'tafrih'], 'entertainment'),
+            (['shopping', 'clothes', 'khareedari'], 'shopping'),
+            (['utilities', 'bijli', 'paani', 'gas', 'bill'], 'utilities'),
+            (['health', 'medical', 'doctor', 'medicine'], 'health'),
+            (['education', 'school', 'tuition', 'books'], 'education'),
+        ]:
+            if any(w in q for w in cat_kw):
+                cat_data = next((c for c in cat_breakdown if c['category'] == cat_key), None)
+                if cat_data:
+                    resp = (
+                        f"📊 **{cat_key.capitalize()} Expenses:**\n\n"
+                        f"• Is mahine: **{self._fmt(cat_data['amount'])}**\n"
+                        f"• Total kharche ka: {cat_data['percentage']}%\n"
+                    )
+                    if monthly_inc > 0:
+                        resp += f"• Income ka: {cat_data['percentage_of_income']}%\n"
+                    # Category-specific tips
+                    tips = {
+                        'food': ["Ghar pe khana pakayein — 40% tak bachta hai", "Grocery list bana ke jayein", "Weekly meal prep karein"],
+                        'transport': ["Carpooling try karein", "Public transport haftay mein 2-3 baar", "Qareeb ki jagah paidal jayein"],
+                        'entertainment': ["Streaming services cinema se sasti hain", "Free events aur parks explore karein", "Friends ke sath ghar pe time spend karein"],
+                        'shopping': ["24-hour rule — pehle sochein", "Discount/sale ka intezaar karein", "Zaroorat vs chahat ka farq samjhein"],
+                        'utilities': ["AC 24-25°C pe rakhen", "LED bulbs use karein", "Paani waste na karein"],
+                        'health': ["Preventive checkup regular rakhein", "Exercise se doctor visits kam hote hain", "Health insurance lo"],
+                        'education': ["Online courses sasti hain", "Library resources free hain", "Group study se kitabein share karein"],
+                    }
+                    if cat_key in tips:
+                        resp += f"\n**{cat_key.capitalize()} Kharcha Kam Karne ke Tips:**\n"
+                        for tip in tips[cat_key]:
+                            resp += f"• {tip}\n"
+                else:
+                    resp = f"📊 Is mahine {cat_key} category mein koi expense record nahi hai."
+                return resp
+
+        # ── Savings goals ─────────────────────────────────────────────────
+        if any(w in q for w in ['goal', 'target', 'manzil', 'dream', 'khwab', 'kab tak', 'kitne din']):
+            resp = "🎯 **Savings Goals ke liye Plan:**\n\n"
+            if savings_pred.get('predictions'):
+                resp += "**Projected Monthly Savings:**\n"
+                for p in savings_pred['predictions'][:4]:
+                    resp += f"• {p['month']}: {self._fmt(p['predicted_savings'])} (cumulative: {self._fmt(p['cumulative_savings'])})\n"
+                resp += (
+                    "\n**Common Goals Planning:**\n"
+                    f"• 📱 Phone (₨80,000): {max(1, int(80000 / max(savings_pred['predicted_savings'],1)))} mahine\n"
+                    f"• 🏍️ Bike (₨200,000): {max(1, int(200000 / max(savings_pred['predicted_savings'],1)))} mahine\n"
+                    f"• ✈️ Trip (₨50,000): {max(1, int(50000 / max(savings_pred['predicted_savings'],1)))} mahine\n"
+                    f"• 🏠 Down Payment (₨500,000): {max(1, int(500000 / max(savings_pred['predicted_savings'],1)))} mahine\n"
+                )
+            else:
+                resp += "Income aur expenses add karein taake main aapke goals calculate kar sakun!"
+            return resp
+
+        # ── Current month summary ─────────────────────────────────────────
+        if any(w in q for w in ['summary', 'total', 'is mahine', 'this month', 'current', 'abhi', 'overall', 'kitna kharcha']):
+            resp = "📋 **Is Mahine ki Financial Summary:**\n\n"
+            resp += f"• 💵 Income: {self._fmt(monthly_inc)}\n"
+            resp += f"• 💸 Total Expenses: {self._fmt(total_exp)}\n"
+            resp += f"• 💰 Net Savings: {self._fmt(max(monthly_inc - total_exp, 0))}\n"
+            resp += f"• 📊 Savings Rate: {savings_rate:.0f}%\n"
+            resp += f"• 🏆 Health Score: {health['score']}/100 ({health['grade']})\n"
+            if cat_breakdown:
+                resp += f"\n**Top Categories:**\n"
+                for c in cat_breakdown[:3]:
+                    resp += f"• {c['category'].capitalize()}: {self._fmt(c['amount'])} ({c['percentage']}%)\n"
+            if analysis.get('insights'):
+                resp += f"\n**AI Insights:**\n"
                 for ins in analysis['insights'][:2]:
-                    response += f"• {ins}\n"
-            response += "\n**Recommendations:**\n"
-            for rec in recommendations[:2]:
-                response += f"• {rec}\n"
+                    resp += f"• {ins}\n"
+            return resp
 
-        return response
+        # ── Invest / mutual funds / growth ────────────────────────────────
+        if any(w in q for w in ['invest', 'mutual fund', 'stocks', 'profit', 'grow', 'multiply', 'return']):
+            saved = max(monthly_inc - total_exp, 0)
+            resp = "📈 **Investment Advice — Pakistan ke Context Mein:**\n\n"
+            if saved > 0:
+                resp += f"Aap is mahine {self._fmt(saved)} bacha rahe hain. Iska ek hissa invest karein:\n\n"
+            resp += (
+                "**Beginners ke liye Options:**\n"
+                "• 🏦 **National Savings** — Government-backed, 15-20% annual return, risk-free\n"
+                "• 📊 **Mutual Funds** (Meezan, UBL, MCB) — 12-18% average return, start from ₨5,000\n"
+                "• 💰 **Defense Savings Certificates** — 3-10 saal, guaranteed return\n"
+                "• 📱 **Roshan Digital Account** — NRPs ke liye, online kholein\n\n"
+                "**Golden Rule:**\n"
+                "• Pehle emergency fund (3 mahine ka kharcha)\n"
+                "• Phir high-interest debt clear karein\n"
+                "• Phir invest karein — 10-15% income se shuru karein\n"
+            )
+            return resp
+
+        # ── Default: full financial summary ──────────────────────────────
+        resp = "💬 **Aapki Financial Overview:**\n\n"
+        if monthly_inc > 0:
+            resp += f"📊 Income: {self._fmt(monthly_inc)} | Expenses: {self._fmt(total_exp)} | Savings: {savings_rate:.0f}%\n\n"
+        if analysis.get('insights'):
+            resp += "**AI Insights:**\n"
+            for ins in analysis['insights'][:3]:
+                resp += f"• {ins}\n"
+        if recommendations:
+            resp += "\n**Top Recommendations:**\n"
+            for rec in recommendations[:3]:
+                resp += f"• {rec}\n"
+        resp += "\n💬 _Koi specific sawal poochein jaise: 'paisa kaise bachayein', 'health score', 'budget tips', ya 'investment advice'_"
+        return resp

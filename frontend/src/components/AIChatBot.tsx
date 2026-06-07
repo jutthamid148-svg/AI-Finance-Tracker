@@ -11,11 +11,14 @@ interface Message {
 }
 
 const QUICK_CHIPS = [
-  '💰 How can I save more money?',
-  '📊 Which category costs me most?',
-  '🔮 What\'s my expense forecast?',
-  '⚠️ Am I overspending anywhere?',
-  '🏆 What is my health score?',
+  '💰 Paisa kaise bachayein?',
+  '📊 Sabse zyada kahan kharcha hai?',
+  '🔮 Aglay mahine ka forecast?',
+  '⚠️ Kya main overspend kar raha hoon?',
+  '🏆 Mera health score kya hai?',
+  '📋 Is mahine ki summary do',
+  '🎯 Savings goal plan karo',
+  '📈 Investment advice do',
 ]
 
 function TypingDots() {
@@ -183,19 +186,18 @@ export default function AIChatBot() {
             </div>
 
             {/* Quick chips */}
-            {messages.length <= 1 && (
-              <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-                {QUICK_CHIPS.map((chip, i) => (
-                  <button
-                    key={i}
-                    onClick={() => sendMessage(chip)}
-                    className="text-[10px] px-2.5 py-1.5 rounded-xl glass border border-primary/20 text-primary/80 hover:bg-primary/10 hover:border-primary/40 transition-all"
-                  >
-                    {chip}
-                  </button>
-                ))}
-              </div>
-            )}
+            <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+              {QUICK_CHIPS.map((chip, i) => (
+                <button
+                  key={i}
+                  onClick={() => sendMessage(chip)}
+                  disabled={typing}
+                  className="text-[10px] px-2.5 py-1.5 rounded-xl glass border border-primary/20 text-primary/80 hover:bg-primary/10 hover:border-primary/40 transition-all disabled:opacity-40"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
 
             {/* Input */}
             <div className="flex-shrink-0 px-3 pb-3 pt-1 border-t border-white/6">
