@@ -357,9 +357,7 @@ export default function DashboardLayout() {
                 {notifOpen && (
                   <>
                     <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                    <div className="relative z-50">
-                      <NotificationPanel onClose={() => setNotifOpen(false)} />
-                    </div>
+                    <NotificationPanel onClose={() => setNotifOpen(false)} />
                   </>
                 )}
               </AnimatePresence>
