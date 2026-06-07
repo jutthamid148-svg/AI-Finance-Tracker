@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -354,14 +355,24 @@ export default function DashboardLayout() {
                   </span>
                 )}
               </button>
-              <AnimatePresence>
-                {notifOpen && (
-                  <>
-                    <div className="fixed inset-0 z-40" onClick={() => setNotifOpen(false)} />
-                    <NotificationPanel onClose={() => setNotifOpen(false)} />
-                  </>
-                )}
-              </AnimatePresence>
+              {createPortal(
+                <AnimatePresence>
+                  {notifOpen && (
+                    <>
+                      <motion.div
+                        key="notif-backdrop"
+                        className="fixed inset-0 z-[998]"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        onClick={() => setNotifOpen(false)}
+                      />
+                      <NotificationPanel key="notif-panel" onClose={() => setNotifOpen(false)} />
+                    </>
+                  )}
+                </AnimatePresence>,
+                document.body
+              )}
             </div>
             <NavLink
               to="/dashboard/profile"
