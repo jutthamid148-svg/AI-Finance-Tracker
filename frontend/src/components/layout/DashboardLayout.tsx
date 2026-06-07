@@ -253,6 +253,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
         </button>
       </div>
     </div>
+    </div>
   )
 }
 
