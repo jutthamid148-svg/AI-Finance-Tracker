@@ -130,10 +130,11 @@ const navSections = [
   {
     label: 'MAIN',
     items: [
-      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true,  color: '#6366F1' },
-      { to: '/dashboard/income',   icon: TrendingUp,   label: 'Income',   end: false, color: '#10B981' },
-      { to: '/dashboard/expenses', icon: TrendingDown, label: 'Expenses', end: false, color: '#EF4444' },
-      { to: '/dashboard/budget',   icon: PieChart,     label: 'Budget',   end: false, color: '#F59E0B' },
+      { to: '/dashboard',          icon: LayoutDashboard, label: 'Dashboard', end: true,  color: '#6366F1' },
+      { to: '/dashboard/income',   icon: TrendingUp,      label: 'Income',    end: false, color: '#10B981' },
+      { to: '/dashboard/expenses', icon: TrendingDown,    label: 'Expenses',  end: false, color: '#EF4444' },
+      { to: '/dashboard/budget',   icon: PieChart,        label: 'Budget',    end: false, color: '#F59E0B' },
+      { to: '/dashboard/savings',  icon: Target,          label: 'Goals',     end: false, color: '#06B6D4' },
     ],
   },
   {
