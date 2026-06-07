@@ -6,6 +6,12 @@ interface ThemeState {
   toggle: () => void
 }
 
+function applyTheme(isDark: boolean) {
+  document.documentElement.classList.toggle('dark', isDark)
+  document.documentElement.style.background = isDark ? '#070e1a' : '#f1f5f9'
+  document.body.style.background = isDark ? '#070e1a' : '#f1f5f9'
+}
+
 export const useThemeStore = create<ThemeState>()(
   persist(
     (set, get) => ({
@@ -13,8 +19,7 @@ export const useThemeStore = create<ThemeState>()(
       toggle: () => {
         const next = !get().isDark
         set({ isDark: next })
-        document.documentElement.classList.toggle('dark', next)
-        document.documentElement.style.background = next ? '#060d18' : '#f1f5f9'
+        applyTheme(next)
       },
     }),
     { name: 'theme' }
@@ -24,6 +29,5 @@ export const useThemeStore = create<ThemeState>()(
 export function applyStoredTheme() {
   const stored = localStorage.getItem('theme')
   const isDark = stored ? JSON.parse(stored)?.state?.isDark !== false : true
-  document.documentElement.classList.toggle('dark', isDark)
-  document.documentElement.style.background = isDark ? '#060d18' : '#f1f5f9'
+  applyTheme(isDark)
 }

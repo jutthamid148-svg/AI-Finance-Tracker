@@ -4,6 +4,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ── Theme CSS variables ──────────────────────────────────────── */
+:root {
+  --bg-app:     #070e1a;
+  --bg-sidebar: rgba(8,14,24,0.95);
+  --bg-header:  rgba(8,14,24,0.90);
+  --bg-surface: rgba(15,23,42,0.70);
+  --bg-card:    rgba(13,20,35,0.80);
+  --border-sub: rgba(255,255,255,0.05);
+  --text-base:  #F8FAFC;
+  --text-muted: rgba(255,255,255,0.45);
+}
+
+html:not(.dark) {
+  --bg-app:     #f1f5f9;
+  --bg-sidebar: rgba(255,255,255,0.98);
+  --bg-header:  rgba(248,250,252,0.95);
+  --bg-surface: rgba(255,255,255,0.85);
+  --bg-card:    rgba(255,255,255,0.90);
+  --border-sub: rgba(0,0,0,0.06);
+  --text-base:  #0f172a;
+  --text-muted: rgba(15,23,42,0.45);
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -14,33 +37,66 @@
   }
 
   body {
-    background-color: #0A1220;
-    color: #F8FAFC;
+    background-color: var(--bg-app);
+    color: var(--text-base);
     font-family: 'Inter', system-ui, sans-serif;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
-  ::-webkit-scrollbar-track {
-    background: #0F172A;
-  }
-  ::-webkit-scrollbar-thumb {
-    background: rgba(99, 102, 241, 0.35);
-    border-radius: 10px;
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(99, 102, 241, 0.65);
-  }
+  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg-surface); }
+  ::-webkit-scrollbar-thumb { background: rgba(99,102,241,0.35); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(99,102,241,0.65); }
 
   select option {
     background-color: #1E293B;
     color: #F8FAFC;
   }
+}
+
+/* ── Light mode overrides ─────────────────────────────────────── */
+html:not(.dark) .text-white { color: #0f172a !important; }
+html:not(.dark) .text-white\/85 { color: rgba(15,23,42,0.85) !important; }
+html:not(.dark) .text-white\/80 { color: rgba(15,23,42,0.80) !important; }
+html:not(.dark) .text-white\/70 { color: rgba(15,23,42,0.70) !important; }
+html:not(.dark) .text-white\/60 { color: rgba(15,23,42,0.60) !important; }
+html:not(.dark) .text-white\/55 { color: rgba(15,23,42,0.55) !important; }
+html:not(.dark) .text-white\/50 { color: rgba(15,23,42,0.50) !important; }
+html:not(.dark) .text-white\/45 { color: rgba(15,23,42,0.45) !important; }
+html:not(.dark) .text-white\/40 { color: rgba(15,23,42,0.40) !important; }
+html:not(.dark) .text-white\/35 { color: rgba(15,23,42,0.35) !important; }
+html:not(.dark) .text-white\/30 { color: rgba(15,23,42,0.30) !important; }
+html:not(.dark) .text-white\/25 { color: rgba(15,23,42,0.25) !important; }
+html:not(.dark) .text-white\/20 { color: rgba(15,23,42,0.20) !important; }
+html:not(.dark) .text-white\/15 { color: rgba(15,23,42,0.15) !important; }
+html:not(.dark) .text-white\/10 { color: rgba(15,23,42,0.10) !important; }
+
+html:not(.dark) .border-white\/5  { border-color: rgba(0,0,0,0.05)  !important; }
+html:not(.dark) .border-white\/8  { border-color: rgba(0,0,0,0.08)  !important; }
+html:not(.dark) .border-white\/10 { border-color: rgba(0,0,0,0.10) !important; }
+html:not(.dark) .border-white\/15 { border-color: rgba(0,0,0,0.12) !important; }
+html:not(.dark) .border-white\/20 { border-color: rgba(0,0,0,0.14) !important; }
+
+html:not(.dark) .bg-white\/5  { background: rgba(0,0,0,0.03)  !important; }
+html:not(.dark) .bg-white\/6  { background: rgba(0,0,0,0.04)  !important; }
+html:not(.dark) .bg-white\/8  { background: rgba(0,0,0,0.05)  !important; }
+html:not(.dark) .bg-white\/10 { background: rgba(0,0,0,0.06) !important; }
+html:not(.dark) .bg-white\/\[0\.03\] { background: rgba(0,0,0,0.02) !important; }
+
+html:not(.dark) .glass {
+  background: rgba(255,255,255,0.70) !important;
+  border-color: rgba(0,0,0,0.07) !important;
+  backdrop-filter: blur(20px);
+}
+html:not(.dark) .glass-card {
+  background: rgba(255,255,255,0.85) !important;
+  border-color: rgba(0,0,0,0.07) !important;
+}
+html:not(.dark) .glass-dark {
+  background: rgba(241,245,249,0.90) !important;
 }
 
 @layer components {

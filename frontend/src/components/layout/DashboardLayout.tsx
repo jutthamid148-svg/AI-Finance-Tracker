@@ -63,7 +63,7 @@ function NotificationPanel({ onClose: _onClose }: { onClose: () => void }) {
       exit={{ opacity: 0, y: -8, scale: 0.97 }}
       transition={{ duration: 0.18 }}
       className="absolute right-0 top-full mt-2 w-80 rounded-2xl border border-white/10 shadow-2xl shadow-black/50 overflow-hidden z-50"
-      style={{ background: '#0d1829' }}
+      style={{ background: 'var(--bg-card)' }}
     >
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
@@ -280,10 +280,10 @@ export default function DashboardLayout() {
   const unreadCount = (notifications as any[]).filter((n: any) => !n.is_read).length
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#070e1a' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'var(--bg-app)' }}>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex flex-col w-60 flex-shrink-0 border-r border-white/5" style={{ background: 'rgba(8,14,24,0.95)' }}>
+      <aside className="hidden md:flex flex-col w-60 flex-shrink-0 border-r border-white/5" style={{ background: 'var(--bg-sidebar)' }}>
         <SidebarContent />
       </aside>
 
@@ -304,7 +304,7 @@ export default function DashboardLayout() {
               exit={{ x: -260 }}
               transition={{ type: 'spring', damping: 28, stiffness: 320 }}
               className="md:hidden fixed left-0 top-0 bottom-0 w-64 z-50 border-r border-white/5 flex flex-col"
-              style={{ background: 'rgba(8,14,24,0.98)' }}
+              style={{ background: 'var(--bg-sidebar)' }}
             >
               <div className="flex items-center justify-between px-5 py-4 border-b border-white/5">
                 <span className="font-bold text-sm text-white/80">Menu</span>
@@ -324,7 +324,7 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         {/* Top bar */}
-        <header className="flex-shrink-0 border-b border-white/5 px-5 py-3.5 flex items-center justify-between" style={{ background: 'rgba(8,14,24,0.9)', backdropFilter: 'blur(20px)' }}>
+        <header className="flex-shrink-0 border-b border-white/5 px-5 py-3.5 flex items-center justify-between" style={{ background: 'var(--bg-header)', backdropFilter: 'blur(20px)' }}>
           <button
             onClick={() => setSidebarOpen(true)}
             className="md:hidden text-white/50 hover:text-white p-1 transition-colors"
