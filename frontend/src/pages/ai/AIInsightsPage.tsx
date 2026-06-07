@@ -381,7 +381,7 @@ export default function AIInsightsPage() {
               <div className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-xl border border-white/10">
                 <Calendar size={12} className="text-white/30" />
                 <span className="text-[11px] text-white/40 font-medium uppercase tracking-wide">
-                  Last Run: {new Date(dataUpdatedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                  Last Run: {new Date(dataUpdatedAt).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
             )}
