@@ -14,7 +14,7 @@ import {
   Lightbulb, Target, BarChart2, Sparkles,
   ArrowUpRight, ArrowDownRight, Wallet, ChevronRight,
   ShieldCheck, Calendar, Activity, PiggyBank, Zap,
-  Coffee, ShoppingBag, Car, Utensils, CheckCircle,
+  Coffee, ShoppingBag, Car, Utensils, CheckCircle, RefreshCw,
 } from 'lucide-react'
 import { aiAPI, transactionAPI } from '../../services/api'
 
@@ -204,7 +204,7 @@ function BudgetRuleBar({ label, pct, amount, color, target }: {
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
 
-  const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights } = useQuery({
+  const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights, isFetching: insightsFetching, dataUpdatedAt } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: () => aiAPI.insights().then(r => r.data),
   })
@@ -376,9 +376,26 @@ export default function AIInsightsPage() {
               <p className="text-white/40 text-sm">Polynomial Regression · Pandas · Scikit-Learn</p>
             </div>
           </div>
-          <div className="flex items-center gap-2 glass px-3 py-1.5 rounded-xl border border-primary/20">
-            <Sparkles size={13} className="text-primary" />
-            <span className="text-xs text-primary font-medium">ML-Powered Predictions</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            {dataUpdatedAt > 0 && (
+              <div className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-xl border border-white/10">
+                <Calendar size={12} className="text-white/30" />
+                <span className="text-[11px] text-white/40 font-medium uppercase tracking-wide">
+                  Last Run: {new Date(dataUpdatedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })}
+                </span>
+              </div>
+            )}
+            <button
+              onClick={() => refetchInsights()}
+              disabled={insightsFetching}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
+              style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}
+            >
+              {insightsFetching
+                ? <><RefreshCw size={14} className="animate-spin" /> Running...</>
+                : <>🤖 Run Analysis</>
+              }
+            </button>
           </div>
         </div>
       </motion.div>

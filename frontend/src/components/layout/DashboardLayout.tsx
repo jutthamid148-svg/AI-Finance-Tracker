@@ -126,15 +126,23 @@ function NotificationPanel({ onClose: _onClose }: { onClose: () => void }) {
   )
 }
 
-const navItems = [
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true, color: '#6366F1' },
-  { to: '/dashboard/income', icon: TrendingUp, label: 'Income', end: false, color: '#10B981' },
-  { to: '/dashboard/expenses', icon: TrendingDown, label: 'Expenses', end: false, color: '#EF4444' },
-  { to: '/dashboard/budget', icon: PieChart, label: 'Budget', end: false, color: '#F59E0B' },
-  { to: '/dashboard/savings', icon: Target, label: 'Savings Goals', end: false, color: '#06B6D4' },
-  { to: '/dashboard/ai-insights', icon: Brain, label: 'AI Insights', end: false, color: '#8B5CF6' },
-  { to: '/dashboard/reports', icon: FileText, label: 'Reports', end: false, color: '#EC4899' },
-  { to: '/dashboard/profile', icon: User, label: 'Profile', end: false, color: '#64748B' },
+const navSections = [
+  {
+    label: 'MAIN',
+    items: [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', end: true,  color: '#6366F1' },
+      { to: '/dashboard/income',   icon: TrendingUp,   label: 'Income',   end: false, color: '#10B981' },
+      { to: '/dashboard/expenses', icon: TrendingDown, label: 'Expenses', end: false, color: '#EF4444' },
+      { to: '/dashboard/budget',   icon: PieChart,     label: 'Budget',   end: false, color: '#F59E0B' },
+    ],
+  },
+  {
+    label: 'INTELLIGENCE',
+    items: [
+      { to: '/dashboard/ai-insights', icon: Brain,    label: 'AI Insights', end: false, color: '#8B5CF6' },
+      { to: '/dashboard/reports',     icon: FileText, label: 'Reports',     end: false, color: '#EC4899' },
+    ],
+  },
 ]
 
 function SidebarContent({ onClose }: { onClose?: () => void }) {
@@ -163,54 +171,59 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        <p className="text-[10px] text-white/25 font-semibold tracking-widest uppercase px-4 mb-3">Navigation</p>
-        {navItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            onClick={onClose}
-            className={({ isActive }) =>
-              `sidebar-link ${isActive ? 'active' : ''}`
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
-                  style={{
-                    background: isActive ? item.color + '25' : 'transparent',
-                  }}
+      <nav className="flex-1 px-3 py-3 overflow-y-auto">
+        {navSections.map((section) => (
+          <div key={section.label} className="mb-4">
+            <p className="text-[10px] text-white/25 font-semibold tracking-widest uppercase px-4 mb-2">{section.label}</p>
+            <div className="space-y-0.5">
+              {section.items.map((item) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  onClick={onClose}
+                  className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
                 >
-                  <item.icon
-                    size={15}
-                    style={{ color: isActive ? item.color : 'rgba(255,255,255,0.4)' }}
-                  />
-                </div>
-                <span className="flex-1 text-sm">{item.label}</span>
-                {isActive && <ChevronRight size={13} className="text-white/30" />}
-              </>
-            )}
-          </NavLink>
+                  {({ isActive }) => (
+                    <>
+                      <div
+                        className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all"
+                        style={{ background: isActive ? item.color + '25' : 'transparent' }}
+                      >
+                        <item.icon size={15} style={{ color: isActive ? item.color : 'rgba(255,255,255,0.4)' }} />
+                      </div>
+                      <span className="flex-1 text-sm">{item.label}</span>
+                      {isActive && <ChevronRight size={13} className="text-white/30" />}
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
+          </div>
         ))}
+
+        {user?.is_staff && (
+          <div className="mb-4">
+            <p className="text-[10px] text-white/25 font-semibold tracking-widest uppercase px-4 mb-2">ADMIN</p>
+            <div className="space-y-0.5">
+              <a
+                href="/admin"
+                className="sidebar-link"
+              >
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Shield size={15} style={{ color: 'rgba(99,102,241,0.7)' }} />
+                </div>
+                <span className="flex-1 text-sm">Admin Panel</span>
+              </a>
+            </div>
+          </div>
+        )}
       </nav>
 
-      {/* Admin Panel link (staff only) */}
-      {user?.is_staff && (
-        <div className="px-3 pb-2">
-          <a
-            href="/admin"
-            className="flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer bg-primary/10 border border-primary/25 text-primary hover:bg-primary/20"
-          >
-            <Shield size={15} />
-            <span>Admin Panel</span>
-          </a>
-        </div>
-      )}
-
-      {/* User & Logout */}
-      <div className="px-3 pb-4 pt-2 border-t border-white/5 space-y-2">
+      {/* Account section */}
+      <div className="px-3 pb-4 pt-2 border-t border-white/5">
+        <p className="text-[10px] text-white/25 font-semibold tracking-widest uppercase px-4 mb-2">ACCOUNT</p>
+        <div className="space-y-1">
         <NavLink
           to="/dashboard/profile"
           onClick={onClose}

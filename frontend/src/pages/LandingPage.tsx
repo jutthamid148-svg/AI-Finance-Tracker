@@ -359,23 +359,23 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#060d18' }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#08081a' }}>
       <CursorGlow />
 
       {/* ── Background: Animated Blobs + Grid + Particles ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[160px]"
-          style={{ background: 'rgba(99,102,241,0.08)' }}
+          style={{ background: 'rgba(192,38,211,0.08)' }}
           animate={{ x: [0, 40, 0], y: [0, 30, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full blur-[140px]"
-          style={{ background: 'rgba(139,92,246,0.07)' }}
+          style={{ background: 'rgba(124,58,237,0.07)' }}
           animate={{ x: [0, -50, 0], y: [0, 40, 0] }}
           transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
         />
         <motion.div className="absolute -bottom-24 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px]"
-          style={{ background: 'rgba(6,182,212,0.06)' }}
+          style={{ background: 'rgba(255,107,157,0.06)' }}
           animate={{ x: [0, 30, 0], y: [0, -40, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 8 }}
         />
