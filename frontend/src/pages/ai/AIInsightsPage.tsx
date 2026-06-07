@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { SkeletonAIInsights } from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
@@ -204,10 +205,26 @@ function BudgetRuleBar({ label, pct, amount, color, target }: {
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
 
+  const [lastRunAt, setLastRunAt] = useState<Date | null>(null)
+  const initialLoadDone = useRef(false)
+
   const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights, isFetching: insightsFetching, dataUpdatedAt } = useQuery({
     queryKey: ['ai-insights'],
     queryFn: () => aiAPI.insights().then(r => r.data),
   })
+
+  // Set lastRunAt on first successful load
+  useEffect(() => {
+    if (dataUpdatedAt > 0 && !initialLoadDone.current) {
+      initialLoadDone.current = true
+      setLastRunAt(new Date(dataUpdatedAt))
+    }
+  }, [dataUpdatedAt])
+
+  const handleRunAnalysis = () => {
+    setLastRunAt(new Date())   // update immediately on click
+    refetchInsights()
+  }
 
   const { data: monthlyHistory, isLoading: historyLoading } = useQuery({
     queryKey: ['monthly-chart'],
@@ -377,16 +394,16 @@ export default function AIInsightsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            {dataUpdatedAt > 0 && (
+            {lastRunAt && (
               <div className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-xl border border-white/10">
                 <Calendar size={12} className="text-white/30" />
                 <span className="text-[11px] text-white/40 font-medium uppercase tracking-wide">
-                  Last Run: {new Date(dataUpdatedAt).toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  Last Run: {lastRunAt.toLocaleString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
                 </span>
               </div>
             )}
             <button
-              onClick={() => refetchInsights()}
+              onClick={handleRunAnalysis}
               disabled={insightsFetching}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-all hover:opacity-90 disabled:opacity-60"
               style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 4px 14px rgba(99,102,241,0.35)' }}

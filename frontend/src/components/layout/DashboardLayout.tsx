@@ -378,7 +378,7 @@ export default function DashboardLayout() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto" style={{ background: 'var(--bg-app)' }}>
           <AnimatePresence mode="wait">
             <motion.div
               key={window.location.pathname}
