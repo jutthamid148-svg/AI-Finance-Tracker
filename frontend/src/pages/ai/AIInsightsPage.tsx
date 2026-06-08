@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonAIInsights } from '../../components/ui/Skeleton'
@@ -16,8 +16,9 @@ import {
   ArrowUpRight, ArrowDownRight, Wallet, ChevronRight,
   ShieldCheck, Calendar, Activity, PiggyBank, Zap,
   Coffee, ShoppingBag, Car, Utensils, CheckCircle, RefreshCw,
+  Trash2, X,
 } from 'lucide-react'
-import { aiAPI, transactionAPI } from '../../services/api'
+import { aiAPI, transactionAPI, authAPI } from '../../services/api'
 
 // ── Colors ───────────────────────────────────────────────────────────────────
 const CAT_COLORS: Record<string, string> = {
@@ -413,12 +414,117 @@ function AnalysisOverlay({ onDone, insights, historicalData }: {
   )
 }
 
+// ── Reset Data Modal ──────────────────────────────────────────────────────────
+function ResetDataModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+  const [text, setText]       = useState('')
+  const [loading, setLoading] = useState(false)
+  const [done, setDone]       = useState(false)
+  const confirmed              = text === 'RESET'
+
+  const handleReset = async () => {
+    if (!confirmed || loading) return
+    setLoading(true)
+    try {
+      await authAPI.resetData()
+      setDone(true)
+      setTimeout(onSuccess, 1600)
+    } catch {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 z-[100] flex items-center justify-center px-4"
+        style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(6px)' }}
+        onClick={(e) => { if (e.target === e.currentTarget && !loading) onClose() }}
+      >
+        <motion.div
+          initial={{ scale: 0.9, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.9, opacity: 0, y: 20 }}
+          className="glass-card p-6 w-full max-w-sm relative"
+        >
+          {!done ? (
+            <>
+              <button onClick={onClose} disabled={loading}
+                className="absolute top-4 right-4 text-white/30 hover:text-white/70 transition-colors">
+                <X size={18} />
+              </button>
+
+              <div className="w-12 h-12 rounded-2xl bg-danger/15 border border-danger/30 flex items-center justify-center mb-4">
+                <Trash2 size={22} className="text-danger" />
+              </div>
+
+              <h3 className="text-lg font-black mb-1">Reset All Data</h3>
+              <p className="text-white/50 text-sm mb-4 leading-relaxed">
+                Yeh action <span className="text-danger font-semibold">permanently</span> delete karega:
+                expenses, income, budgets, savings goals, aur notifications.
+              </p>
+
+              <div className="glass rounded-xl p-3 border border-white/8 mb-4 space-y-1.5 text-xs text-white/50">
+                {['All Expenses', 'All Income Records', 'All Budgets', 'All Savings Goals', 'All Notifications'].map(item => (
+                  <div key={item} className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full bg-danger/60 flex-shrink-0" />
+                    {item}
+                  </div>
+                ))}
+              </div>
+
+              <label className="text-xs text-white/40 mb-1.5 block font-semibold uppercase tracking-wide">
+                Confirm karne ke liye "RESET" likhein
+              </label>
+              <input
+                value={text}
+                onChange={e => setText(e.target.value)}
+                placeholder='Type RESET here'
+                autoFocus
+                className="w-full glass rounded-xl px-3.5 py-2.5 text-sm border border-white/10 focus:border-danger/50 outline-none bg-transparent mb-4 placeholder:text-white/20 font-mono tracking-widest"
+              />
+
+              <div className="flex gap-2.5">
+                <button onClick={onClose} disabled={loading}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold glass border border-white/10 text-white/60 hover:text-white transition-colors">
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReset}
+                  disabled={!confirmed || loading}
+                  className="flex-1 py-2.5 rounded-xl text-sm font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={confirmed ? { background: 'linear-gradient(135deg,#EF4444,#DC2626)', boxShadow: '0 4px 14px rgba(239,68,68,0.4)' } : { background: 'rgba(239,68,68,0.15)' }}
+                >
+                  {loading ? <><RefreshCw size={13} className="animate-spin" /> Deleting...</> : <><Trash2 size={13} /> Reset Data</>}
+                </button>
+              </div>
+            </>
+          ) : (
+            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+              className="flex flex-col items-center py-4 text-center gap-3">
+              <div className="w-14 h-14 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-center">
+                <CheckCircle size={28} className="text-success" />
+              </div>
+              <div>
+                <p className="font-black text-lg">Data Reset Ho Gaya!</p>
+                <p className="text-white/40 text-sm mt-0.5">Sab kuch delete kar diya gaya</p>
+              </div>
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  )
+}
+
 // ── Main Page ────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
 
   const [lastRunAt, setLastRunAt]       = useState<Date | null>(null)
   const [showOverlay, setShowOverlay]   = useState(false)
+  const [showReset, setShowReset]       = useState(false)
   const initialLoadDone                 = useRef(false)
+  const queryClient                     = useQueryClient()
 
   const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights, isFetching: insightsFetching, dataUpdatedAt } = useQuery({
     queryKey: ['ai-insights'],
@@ -591,8 +697,21 @@ export default function AIInsightsPage() {
     { name: 'Spent', value: Math.max(100 - savingsRate, 0), fill: 'rgba(255,255,255,0.05)' },
   ]
 
+  const handleResetSuccess = () => {
+    queryClient.clear()
+    setShowReset(false)
+  }
+
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto">
+
+      {/* ── Reset Modal ── */}
+      {showReset && (
+        <ResetDataModal
+          onClose={() => setShowReset(false)}
+          onSuccess={handleResetSuccess}
+        />
+      )}
 
       {/* ── Analysis Overlay ── */}
       <AnimatePresence>
@@ -639,6 +758,13 @@ export default function AIInsightsPage() {
                 </span>
               </div>
             )}
+            <button
+              onClick={() => setShowReset(true)}
+              title="Reset all data"
+              className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold text-danger border border-danger/30 bg-danger/[0.07] hover:bg-danger/15 transition-all"
+            >
+              <Trash2 size={13} /> Reset
+            </button>
             <button
               onClick={handleRunAnalysis}
               disabled={insightsFetching}
