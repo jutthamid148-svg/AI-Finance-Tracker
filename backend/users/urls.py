@@ -16,6 +16,7 @@ urlpatterns = [
     path('notifications/mark-read/', views.MarkNotificationReadView.as_view(), name='mark_all_read'),
     path('notifications/<uuid:pk>/mark-read/', views.MarkNotificationReadView.as_view(), name='mark_read'),
     path('dashboard/stats/', views.DashboardStatsView.as_view(), name='dashboard_stats'),
+    path('reset-data/', views.ResetUserDataView.as_view(), name='reset_data'),
 
     path('google/', views.GoogleAuthView.as_view(), name='google_auth'),
 

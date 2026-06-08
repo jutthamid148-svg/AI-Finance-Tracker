@@ -291,6 +291,42 @@ class MarkNotificationReadView(APIView):
         return Response({'message': 'Marked as read'})
 
 
+class ResetUserDataView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        if request.data.get('confirm') != 'RESET':
+            return Response({'error': 'Confirmation required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        from transactions.models import Income, Expense
+        from budgets.models import Budget
+        from savings.models import SavingsGoal
+
+        expenses_count   = Expense.objects.filter(user=user).count()
+        income_count     = Income.objects.filter(user=user).count()
+        budgets_count    = Budget.objects.filter(user=user).count()
+        goals_count      = SavingsGoal.objects.filter(user=user).count()
+        notifs_count     = Notification.objects.filter(user=user).count()
+
+        Expense.objects.filter(user=user).delete()
+        Income.objects.filter(user=user).delete()
+        Budget.objects.filter(user=user).delete()
+        SavingsGoal.objects.filter(user=user).delete()
+        Notification.objects.filter(user=user).delete()
+
+        return Response({
+            'message': 'All data reset successfully',
+            'deleted': {
+                'expenses':      expenses_count,
+                'income':        income_count,
+                'budgets':       budgets_count,
+                'savings_goals': goals_count,
+                'notifications': notifs_count,
+            }
+        })
+
+
 class DashboardStatsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
