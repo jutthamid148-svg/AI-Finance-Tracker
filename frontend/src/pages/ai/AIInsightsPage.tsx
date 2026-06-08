@@ -427,9 +427,11 @@ function ResetDataModal({ onClose, onSuccess }: { onClose: () => void; onSuccess
     try {
       await authAPI.resetData()
       setDone(true)
-      setTimeout(onSuccess, 1600)
-    } catch {
+      setTimeout(onSuccess, 1800)
+    } catch (err: any) {
       setLoading(false)
+      const msg = err?.response?.data?.error || err?.message || 'Reset failed. Try again.'
+      alert(msg)
     }
   }
 
@@ -700,6 +702,7 @@ export default function AIInsightsPage() {
   const handleResetSuccess = () => {
     queryClient.clear()
     setShowReset(false)
+    window.location.href = '/dashboard'
   }
 
   return (

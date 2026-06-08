@@ -226,9 +226,9 @@ export default function ProfilePage() {
   const handleResetSuccess = (deleted: any) => {
     setShowResetModal(false)
     setResetDeleted(deleted)
-    // Invalidate all cached queries so UI refreshes
-    queryClient.invalidateQueries()
+    queryClient.clear()
     toast.success('All data reset successfully!')
+    setTimeout(() => { window.location.href = '/dashboard' }, 2000)
   }
 
   const profileForm = useForm({
