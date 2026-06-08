@@ -364,28 +364,28 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#08081a' }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#000000' }}>
       <CursorGlow />
 
       {/* ── Background: Animated Blobs + Grid + Particles ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
         <motion.div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[160px]"
-          style={{ background: 'rgba(192,38,211,0.08)' }}
+          style={{ background: 'rgba(192,38,211,0.13)' }}
           animate={{ x: [0, 40, 0], y: [0, 30, 0] }}
           transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
         />
         <motion.div className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full blur-[140px]"
-          style={{ background: 'rgba(124,58,237,0.07)' }}
+          style={{ background: 'rgba(99,102,241,0.12)' }}
           animate={{ x: [0, -50, 0], y: [0, 40, 0] }}
           transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
         />
         <motion.div className="absolute -bottom-24 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px]"
-          style={{ background: 'rgba(255,107,157,0.06)' }}
+          style={{ background: 'rgba(139,92,246,0.10)' }}
           animate={{ x: [0, 30, 0], y: [0, -40, 0] }}
           transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 8 }}
         />
         {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.018]" style={{
+        <div className="absolute inset-0 opacity-[0.025]" style={{
           backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)`,
           backgroundSize: '32px 32px',
         }} />
@@ -401,7 +401,7 @@ export default function LandingPage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]"
-        style={{ background: 'rgba(6,13,24,0.92)', backdropFilter: 'blur(24px)' }}
+        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(24px)' }}
       >
         <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -461,7 +461,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden border-t border-white/5 px-5 py-4 flex flex-col gap-4 overflow-hidden"
-              style={{ background: 'rgba(6,13,24,0.98)' }}
+              style={{ background: 'rgba(0,0,0,0.98)' }}
             >
               {[['#features','Features'],['#how-it-works','How It Works'],['#stats','Stats'],['#testimonials','Reviews']].map(([href, label]) => (
                 <a key={href} href={href} className="text-white/55 hover:text-white transition-colors text-sm"
@@ -714,8 +714,8 @@ export default function LandingPage() {
           Built with Industry-Standard Technologies
         </p>
         <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to right, #060d18, transparent)' }} />
-          <div className="absolute right-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to left, #060d18, transparent)' }} />
+          <div className="absolute left-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to right, #000000, transparent)' }} />
+          <div className="absolute right-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to left, #000000, transparent)' }} />
           <motion.div
             className="flex gap-3 w-max"
             animate={{ x: ['0%', '-50%'] }}
@@ -982,7 +982,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-1">
               {['AR','FK','BH','SM','UT','ZG'].map((init, i) => (
                 <div key={i} className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#060d18] ${['bg-blue-500','bg-purple-500','bg-green-500','bg-orange-500','bg-teal-500','bg-pink-500'][i]}`}
-                  style={{ marginLeft: i > 0 ? '-6px' : '0', zIndex: 10 - i }}>{init}</div>
+                  style={{ marginLeft: i > 0 ? '-6px' : '0', zIndex: 10 - i, borderColor: '#000' }}>{init}</div>
               ))}
               <span className="text-white/35 text-xs ml-2">+12k users</span>
             </div>

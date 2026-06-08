@@ -8,12 +8,12 @@ import {
   Cell, PieChart, Pie, Legend,
 } from 'recharts'
 import {
-  TrendingUp, TrendingDown, Wallet, Target, Brain,
+  TrendingUp, TrendingDown, Wallet, Target, Brain, PiggyBank,
   ArrowUpRight, ArrowDownRight, Plus, X, Zap,
   CheckCircle2, Clock, Activity, Shield,
   DollarSign, BarChart2, Sparkles, Bell, BellOff,
   CalendarDays, Flame, AlertTriangle, Trophy, Layers,
-  Globe2, Hash, Calculator, Volume2, VolumeX, ChevronDown, ChevronUp,
+  Hash, Calculator, Volume2, VolumeX, ChevronDown, ChevronUp,
 } from 'lucide-react'
 import { authAPI, transactionAPI, budgetAPI, savingsAPI, aiAPI } from '../../services/api'
 import { SkeletonDashboard } from '../../components/ui/Skeleton'
@@ -203,14 +203,6 @@ export default function DashboardPage() {
     queryKey: ['month-incomes', currentMonth, currentYear],
     queryFn: () => transactionAPI.incomeList({ month: currentMonth, year: currentYear }).then(r => r.data.results || r.data),
   })
-  // Currency rates — free API, cache 1 hour
-  const { data: fxData } = useQuery({
-    queryKey: ['currency-rates'],
-    queryFn: () => fetch('https://open.er-api.com/v6/latest/USD').then(r => r.json()),
-    staleTime: 1000 * 60 * 60,
-    retry: 1,
-  })
-
   const markAllReadMutation = useMutation({ mutationFn: () => authAPI.markAllRead(), onSuccess: () => refetchNotifs() })
 
   // ── Overspending alarm ────────────────────────────────────────────────────
@@ -294,15 +286,6 @@ export default function DashboardPage() {
     ? (stats?.monthly_expenses || 0) / (monthExpenses as any[]).length
     : 0
   const netWorth = (stats?.current_balance || 0) + (stats?.total_savings || 0)
-
-  // Currency rates (USD base → PKR conversion)
-  const pkrRate = fxData?.rates?.PKR || 0
-  const currencies = pkrRate > 0 ? [
-    { code: 'USD', flag: '🇺🇸', rate: Math.round(pkrRate) },
-    { code: 'GBP', flag: '🇬🇧', rate: Math.round(pkrRate / (fxData?.rates?.GBP || 1)) },
-    { code: 'SAR', flag: '🇸🇦', rate: Math.round(pkrRate / (fxData?.rates?.SAR || 1)) },
-    { code: 'AED', flag: '🇦🇪', rate: Math.round(pkrRate / (fxData?.rates?.AED || 1)) },
-  ] : []
 
   const recentTxns = [
     ...(recentExpenses || []).map((e: any) => ({ ...e, txType: 'expense' })),
@@ -1051,31 +1034,138 @@ export default function DashboardPage() {
         </motion.div>
       )}
 
-      {/* Currency Rates */}
-      {currencies.length > 0 && (
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.58 }} className="card mb-5">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-cyan-500/25">
-                <Globe2 size={16} className="text-white" />
+      {/* ── Monthly Performance Scorecard ── */}
+      {(() => {
+        const savingsRatePct = (stats?.monthly_income || 0) > 0
+          ? Math.max(Math.round((((stats?.monthly_income || 0) - (stats?.monthly_expenses || 0)) / (stats?.monthly_income || 1)) * 100), 0)
+          : 0
+        const budgetsOnTrack = ((budgets as any[]) || []).filter((b: any) => !b.is_exceeded).length
+        const budgetsTotal   = ((budgets as any[]) || []).length
+        const netFlow        = (stats?.monthly_income || 0) - (stats?.monthly_expenses || 0)
+        const isPositive     = netFlow >= 0
+
+        const grade = savingsRatePct >= 20 && (budgetsTotal === 0 || budgetsOnTrack === budgetsTotal) ? 'A'
+          : savingsRatePct >= 15 ? 'B'
+          : savingsRatePct >= 8  ? 'C' : 'D'
+        const gradeColor = grade === 'A' ? '#10B981' : grade === 'B' ? '#6366F1' : grade === 'C' ? '#F59E0B' : '#EF4444'
+        const gradeBg    = grade === 'A' ? 'border-success/30 bg-success/8 text-success'
+          : grade === 'B' ? 'border-primary/30 bg-primary/8 text-primary'
+          : grade === 'C' ? 'border-warning/30 bg-warning/8 text-warning'
+          : 'border-danger/30 bg-danger/8 text-danger'
+
+        const quickTip = savingsRatePct < 10
+          ? '💡 Aim to save at least 10% of your income every month — start small, grow consistently.'
+          : budgetsTotal > 0 && budgetsOnTrack < budgetsTotal
+          ? `⚠️ ${budgetsTotal - budgetsOnTrack} budget(s) exceeded this month — review your spending categories.`
+          : weeklyData.change > 15
+          ? '📈 Your spending is up this week — check your recent expenses to stay on track.'
+          : '✅ Great job! Your finances look healthy this month. Keep it up!'
+
+        const kpis = [
+          {
+            label: 'Savings Rate', value: `${savingsRatePct}%`, sub: 'of income saved',
+            icon: PiggyBank,
+            color: savingsRatePct >= 20 ? '#10B981' : savingsRatePct >= 10 ? '#F59E0B' : '#EF4444',
+            grad: savingsRatePct >= 20 ? 'from-success to-emerald-600' : savingsRatePct >= 10 ? 'from-warning to-amber-600' : 'from-danger to-rose-600',
+            bar: Math.min((savingsRatePct / 25) * 100, 100),
+            badge: savingsRatePct >= 20 ? '✅ Target Met' : savingsRatePct >= 10 ? '⚠ Improving' : '❌ Low',
+          },
+          {
+            label: 'Budget Status',
+            value: budgetsTotal > 0 ? `${budgetsOnTrack}/${budgetsTotal}` : '—',
+            sub: budgetsTotal > 0 ? 'budgets on track' : 'no budgets set',
+            icon: Target,
+            color: budgetsTotal === 0 ? '#64748B' : budgetsOnTrack === budgetsTotal ? '#10B981' : budgetsOnTrack >= budgetsTotal / 2 ? '#F59E0B' : '#EF4444',
+            grad: 'from-primary to-secondary',
+            bar: budgetsTotal > 0 ? (budgetsOnTrack / budgetsTotal) * 100 : 0,
+            badge: budgetsTotal === 0 ? '➕ Add budgets' : budgetsOnTrack === budgetsTotal ? '✅ All good' : `⚠ ${budgetsTotal - budgetsOnTrack} exceeded`,
+          },
+          {
+            label: 'Weekly Change', value: `${weeklyData.change >= 0 ? '+' : ''}${weeklyData.change.toFixed(0)}%`,
+            sub: weeklyData.change <= 0 ? 'spending decreased' : 'spending increased',
+            icon: weeklyData.change <= 0 ? TrendingDown : TrendingUp,
+            color: weeklyData.change <= 0 ? '#10B981' : weeklyData.change > 20 ? '#EF4444' : '#F59E0B',
+            grad: weeklyData.change <= 0 ? 'from-success to-emerald-600' : 'from-danger to-rose-600',
+            bar: Math.min(Math.abs(weeklyData.change) / 40 * 100, 100),
+            badge: weeklyData.change <= 0 ? '📉 Good trend' : '📈 Watch spend',
+          },
+          {
+            label: 'Net Cash Flow', value: `${isPositive ? '+' : '-'}₨${Math.abs(netFlow / 1000).toFixed(1)}k`,
+            sub: isPositive ? 'surplus this month' : 'deficit this month',
+            icon: isPositive ? ArrowUpRight : ArrowDownRight,
+            color: isPositive ? '#6366F1' : '#EF4444',
+            grad: isPositive ? 'from-primary to-secondary' : 'from-danger to-rose-600',
+            bar: (stats?.monthly_income || 0) > 0 ? Math.min(Math.abs(netFlow) / (stats?.monthly_income || 1) * 100, 100) : 0,
+            badge: isPositive ? '💚 Positive' : '🔴 Negative',
+          },
+        ]
+
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.58 }}
+            className="card mb-5 relative overflow-hidden">
+            <div className="absolute inset-0 opacity-[0.025] bg-gradient-to-br from-primary to-secondary" />
+            <div className="relative">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 bg-gradient-to-br from-primary to-secondary rounded-xl flex items-center justify-center shadow-lg shadow-primary/25">
+                    <Sparkles size={16} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-sm">Monthly Performance</h2>
+                    <p className="text-white/35 text-xs">{new Date().toLocaleString('default', { month: 'long', year: 'numeric' })}</p>
+                  </div>
+                </div>
+                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border font-bold text-sm ${gradeBg}`}>
+                  <span>Grade</span>
+                  <span className="text-xl font-black" style={{ color: gradeColor }}>{grade}</span>
+                </div>
               </div>
-              <div><h2 className="font-bold text-sm">Live Exchange Rates</h2><p className="text-white/35 text-xs">PKR equivalent today</p></div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                {kpis.map((k, i) => (
+                  <motion.div key={i}
+                    initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.62 + i * 0.06 }}
+                    whileHover={{ y: -3 }}
+                    className="glass rounded-2xl p-4 border border-white/6 relative overflow-hidden group"
+                  >
+                    <div className="absolute inset-0 opacity-0 group-hover:opacity-[0.05] bg-gradient-to-br transition-opacity"
+                      style={{ backgroundImage: `linear-gradient(135deg, ${k.color}, transparent)` }} />
+                    <div className="relative">
+                      <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${k.grad} flex items-center justify-center mb-3 shadow-lg`}
+                        style={{ boxShadow: `0 4px 12px ${k.color}40` }}>
+                        <k.icon size={15} className="text-white" />
+                      </div>
+                      <p className="text-white/35 text-[10px] mb-0.5">{k.label}</p>
+                      <p className="text-xl font-black mb-0.5" style={{ color: k.color }}>{k.value}</p>
+                      <p className="text-white/30 text-[9px] mb-2.5">{k.sub}</p>
+                      <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${k.bar}%` }}
+                          transition={{ duration: 0.9, delay: 0.7 + i * 0.07, ease: 'easeOut' }}
+                          className="h-full rounded-full"
+                          style={{ background: k.color, boxShadow: `0 0 8px ${k.color}60` }}
+                        />
+                      </div>
+                      <p className="text-[9px] mt-1.5 font-semibold" style={{ color: k.color + 'cc' }}>{k.badge}</p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+
+              {/* Quick tip strip */}
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-3">
+                <div className="flex-1 text-xs text-white/45 leading-relaxed">{quickTip}</div>
+                <Link to="/dashboard/ai-insights"
+                  className="text-primary text-xs hover:text-secondary transition-colors flex items-center gap-1 flex-shrink-0 font-semibold">
+                  Full Analysis <ArrowUpRight size={11} />
+                </Link>
+              </div>
             </div>
-            <span className="text-[10px] text-white/20">Auto-updates hourly</span>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            {currencies.map((c, i) => (
-              <motion.div key={c.code} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6 + i * 0.05 }}
-                className="glass p-3.5 rounded-xl border border-white/5 text-center">
-                <span className="text-2xl block mb-1">{c.flag}</span>
-                <p className="text-xs font-bold text-white/60">{c.code}</p>
-                <p className="text-lg font-black mt-0.5">₨{c.rate.toLocaleString()}</p>
-                <p className="text-[9px] text-white/25 mt-0.5">per 1 {c.code}</p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.div>
-      )}
+          </motion.div>
+        )
+      })()}
 
       {/* AI Quick Insights */}
       {aiInsights?.insights?.length > 0 && (

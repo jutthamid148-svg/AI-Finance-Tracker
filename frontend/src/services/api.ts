@@ -82,6 +82,7 @@ export const authAPI = {
   resetPassword: (data: any) => api.post('/auth/reset-password/', data),
   verifyEmail: (token: string) => api.post('/auth/verify-email/', { token }),
   dashboardStats: () => api.get('/auth/dashboard/stats/'),
+  resetData: () => api.post('/auth/reset-data/', { confirm: 'RESET' }),
   notifications: () => api.get('/auth/notifications/'),
   markAllRead: () => api.post('/auth/notifications/mark-read/'),
   markOneRead: (id: string) => api.post(`/auth/notifications/${id}/mark-read/`),
