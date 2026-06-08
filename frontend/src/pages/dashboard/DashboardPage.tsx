@@ -21,6 +21,7 @@ import ErrorState from '../../components/ui/ErrorState'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../store/authStore'
 import toast from 'react-hot-toast'
+import { useRemindersStore, getDaysUntilDue, REMINDER_CATEGORIES } from '../../store/remindersStore'
 
 const CAT_COLORS: Record<string, string> = {
   food: '#F59E0B', transport: '#6366F1', shopping: '#EC4899',
@@ -168,6 +169,7 @@ function HealthScore({ income, expenses, budgetRate }: { income: number; expense
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const navigate = useNavigate()
+  const { reminders: allReminders } = useRemindersStore()
   const [quickAdd, setQuickAdd] = useState<'income' | 'expense' | null>(null)
   const now = new Date()
   const currentMonth = now.getMonth() + 1
@@ -1162,6 +1164,56 @@ export default function DashboardPage() {
                   Full Analysis <ArrowUpRight size={11} />
                 </Link>
               </div>
+            </div>
+          </motion.div>
+        )
+      })()}
+
+      {/* ── Upcoming Bill Reminders ── */}
+      {(() => {
+        const active = allReminders.filter((r: any) => r.active)
+        if (active.length === 0) return null
+        const upcoming = [...active]
+          .sort((a, b) => getDaysUntilDue(a.dueDay) - getDaysUntilDue(b.dueDay))
+          .slice(0, 3)
+        return (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }} className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl flex items-center justify-center shadow-lg shadow-warning/20"
+                  style={{ background: 'linear-gradient(135deg,#F59E0B,#F97316)' }}>
+                  <Bell size={15} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="font-bold text-sm">Upcoming Bills</h2>
+                  <p className="text-white/35 text-xs">{active.length} active reminders</p>
+                </div>
+              </div>
+              <Link to="/dashboard/reminders" className="text-warning text-xs hover:text-orange-400 transition-colors flex items-center gap-1 font-medium">
+                All Bills <ArrowUpRight size={12} />
+              </Link>
+            </div>
+            <div className="space-y-2.5">
+              {upcoming.map((r) => {
+                const days = getDaysUntilDue(r.dueDay)
+                const cat  = REMINDER_CATEGORIES.find(c => c.value === r.category)
+                const urgent = days <= 3
+                return (
+                  <div key={r.id} className={`flex items-center gap-3 glass px-3.5 py-2.5 rounded-xl border ${urgent ? 'border-warning/30' : 'border-white/6'} transition-all`}>
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center text-base flex-shrink-0"
+                      style={{ background: r.color + '20' }}>
+                      {cat?.label.split(' ')[0]}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-semibold truncate">{r.name}</div>
+                      <div className="text-xs text-white/40">₨{r.amount.toLocaleString()} • {r.dueDay}th</div>
+                    </div>
+                    <div className={`text-xs font-bold px-2.5 py-1 rounded-lg ${urgent ? 'bg-warning/20 text-warning' : 'bg-white/5 text-white/40'}`}>
+                      {days === 0 ? 'Today' : `${days}d`}
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </motion.div>
         )

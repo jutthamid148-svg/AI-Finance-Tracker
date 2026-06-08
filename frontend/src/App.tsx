@@ -16,6 +16,7 @@ import SavingsPage from './pages/savings/SavingsPage'
 import AIInsightsPage from './pages/ai/AIInsightsPage'
 import ReportsPage from './pages/reports/ReportsPage'
 import ProfilePage from './pages/profile/ProfilePage'
+import RemindersPage from './pages/reminders/RemindersPage'
 import DashboardLayout from './components/layout/DashboardLayout'
 import AdminPanel from './pages/admin/AdminPanel'
 import PricingPage from './pages/PricingPage'
@@ -94,6 +95,7 @@ function App() {
           <Route path="savings" element={<SavingsPage />} />
           <Route path="ai-insights" element={<AIInsightsPage />} />
           <Route path="reports" element={<ReportsPage />} />
+          <Route path="reminders" element={<RemindersPage />} />
           <Route path="profile" element={<ProfilePage />} />
         </Route>
 
