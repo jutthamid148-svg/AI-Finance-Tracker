@@ -1,6 +1,21 @@
 import { create } from 'zustand'
 import api, { authAPI } from '../services/api'
 import { googleSignIn, firebaseSignOut } from '../services/firebase'
+import { useRemindersStore } from './remindersStore'
+import { useRecurringStore } from './recurringStore'
+import { useNetWorthStore } from './netWorthStore'
+import { queryClient } from '../queryClient'
+
+const clearUserLocalStorage = () => {
+  useRemindersStore.getState().reset?.()
+  useRecurringStore.getState().reset?.()
+  useNetWorthStore.getState().reset?.()
+  localStorage.removeItem('access_token')
+  localStorage.removeItem('refresh_token')
+  localStorage.removeItem('bill-reminders')
+  localStorage.removeItem('recurring-store')
+  localStorage.removeItem('net-worth-store')
+}
 
 interface User {
   id: string
@@ -40,6 +55,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true })
     try {
       const { data } = await authAPI.login({ email, password })
+      queryClient.clear()
+      clearUserLocalStorage()
       localStorage.setItem('access_token', data.access)
       localStorage.setItem('refresh_token', data.refresh)
       set({ user: data.user, isAuthenticated: true, isLoading: false })
@@ -53,6 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true })
     try {
       const { data } = await authAPI.register(formData)
+      queryClient.clear()
+      clearUserLocalStorage()
       localStorage.setItem('access_token', data.tokens.access)
       localStorage.setItem('refresh_token', data.tokens.refresh)
       set({ user: data.user, isAuthenticated: true, isLoading: false })
@@ -71,6 +90,8 @@ export const useAuthStore = create<AuthState>((set) => ({
         display_name: displayName,
         photo_url: photoURL,
       })
+      queryClient.clear()
+      clearUserLocalStorage()
       localStorage.setItem('access_token', data.tokens.access)
       localStorage.setItem('refresh_token', data.tokens.refresh)
       set({ user: data.user, isAuthenticated: true, isLoading: false })
@@ -84,7 +105,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     const refresh = localStorage.getItem('refresh_token')
     if (refresh) authAPI.logout(refresh).catch(() => {})
     firebaseSignOut().catch(() => {})
-    localStorage.clear()
+    queryClient.clear()
+    clearUserLocalStorage()
     set({ user: null, isAuthenticated: false, isLoading: false })
   },
 
@@ -95,7 +117,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await authAPI.profile()
       set({ user: data, isAuthenticated: true, isLoading: false })
     } catch {
-      localStorage.clear()
+      clearUserLocalStorage()
       set({ user: null, isAuthenticated: false, isLoading: false })
     }
   },
