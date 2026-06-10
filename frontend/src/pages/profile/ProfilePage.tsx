@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
@@ -7,22 +7,229 @@ import {
   User, Lock, Camera, Save, Eye, EyeOff, Loader2, Crown,
   BarChart2, Download, TrendingUp, TrendingDown, Target,
   Calendar, Hash, DollarSign, Shield, Activity,
+  AlertTriangle, Trash2, X, CheckCircle,
 } from 'lucide-react'
 import { authAPI, transactionAPI, savingsAPI, reportAPI } from '../../services/api'
 import { useAuthStore } from '../../store/authStore'
 
 type Tab = 'profile' | 'password' | 'stats'
 
+// ── Reset Confirmation Modal ──────────────────────────────────────────────────
+function ResetModal({ onClose, onSuccess }: { onClose: () => void; onSuccess: (deleted: any) => void }) {
+  const [confirmText, setConfirmText] = useState('')
+  const [resetting, setResetting]     = useState(false)
+  const confirmed = confirmText === 'RESET'
+
+  const handleReset = async () => {
+    if (!confirmed) return
+    setResetting(true)
+    try {
+      const res = await authAPI.resetData()
+      onSuccess(res.data.deleted)
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error || 'Reset failed — try again')
+      setResetting(false)
+    }
+  }
+
+  const WHAT_GETS_DELETED = [
+    { icon: '💸', label: 'All expense transactions' },
+    { icon: '💵', label: 'All income records' },
+    { icon: '📊', label: 'All budget plans' },
+    { icon: '🎯', label: 'All savings goals & progress' },
+    { icon: '🔔', label: 'All notifications' },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
+      onClick={e => e.target === e.currentTarget && !resetting && onClose()}
+    >
+      <motion.div
+        initial={{ scale: 0.88, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.88, y: 24 }}
+        className="w-full max-w-md rounded-2xl border border-danger/30 overflow-hidden shadow-2xl"
+        style={{ background: 'linear-gradient(135deg, #130a0a 0%, #0d0808 100%)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/6"
+          style={{ background: 'rgba(239,68,68,0.08)' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-danger/20 flex items-center justify-center border border-danger/30">
+              <AlertTriangle size={18} className="text-danger" />
+            </div>
+            <div>
+              <p className="font-black text-sm text-white">Reset All Financial Data</p>
+              <p className="text-danger/60 text-[10px]">This action cannot be undone</p>
+            </div>
+          </div>
+          {!resetting && (
+            <button onClick={onClose} className="w-7 h-7 rounded-lg bg-white/6 hover:bg-white/12 flex items-center justify-center transition-colors">
+              <X size={14} className="text-white/50" />
+            </button>
+          )}
+        </div>
+
+        <div className="p-5 space-y-4">
+          {/* Warning */}
+          <div className="glass px-4 py-3 rounded-xl border border-danger/20">
+            <p className="text-xs text-white/60 leading-relaxed">
+              ⚠️ Yeh action aapka <span className="text-white font-semibold">poora financial data</span> permanently delete kar dega.
+              Account safe rahega — sirf data delete hoga.
+            </p>
+          </div>
+
+          {/* What gets deleted */}
+          <div>
+            <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mb-2">Jo Delete Hoga:</p>
+            <div className="space-y-1.5">
+              {WHAT_GETS_DELETED.map((item, i) => (
+                <motion.div key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.06 }}
+                  className="flex items-center gap-2.5 glass px-3 py-2 rounded-xl border border-danger/10">
+                  <span className="text-sm">{item.icon}</span>
+                  <span className="text-xs text-white/60">{item.label}</span>
+                  <Trash2 size={10} className="text-danger/40 ml-auto" />
+                </motion.div>
+              ))}
+            </div>
+          </div>
+
+          {/* Confirm input */}
+          <div>
+            <p className="text-white/40 text-xs mb-2">
+              Confirm karne ke liye <span className="text-danger font-bold font-mono">RESET</span> type karein:
+            </p>
+            <input
+              value={confirmText}
+              onChange={e => setConfirmText(e.target.value.toUpperCase())}
+              disabled={resetting}
+              placeholder="Type RESET here..."
+              className={`w-full rounded-xl px-4 py-2.5 text-sm font-mono border outline-none transition-all
+                ${confirmed
+                  ? 'border-danger/60 bg-danger/10 text-danger placeholder-danger/30'
+                  : 'border-white/10 bg-white/[0.04] text-white placeholder-white/20'
+                } disabled:opacity-50`}
+            />
+          </div>
+
+          {/* Buttons */}
+          <div className="flex gap-3">
+            <button onClick={onClose} disabled={resetting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-semibold border border-white/10 text-white/60 hover:bg-white/5 transition-all disabled:opacity-40">
+              Cancel
+            </button>
+            <button
+              onClick={handleReset}
+              disabled={!confirmed || resetting}
+              className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all disabled:opacity-40"
+              style={{ background: confirmed ? 'linear-gradient(135deg,#EF4444,#DC2626)' : 'rgba(239,68,68,0.15)', boxShadow: confirmed ? '0 4px 16px rgba(239,68,68,0.4)' : 'none' }}
+            >
+              {resetting
+                ? <><Loader2 size={14} className="animate-spin" /> Resetting...</>
+                : <><Trash2 size={14} /> Reset Data</>
+              }
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── Reset Success Modal ───────────────────────────────────────────────────────
+function ResetSuccessModal({ deleted, onClose }: { deleted: any; onClose: () => void }) {
+  const stats = [
+    { icon: '💸', label: 'Expenses',      count: deleted?.expenses      || 0 },
+    { icon: '💵', label: 'Income',         count: deleted?.income        || 0 },
+    { icon: '📊', label: 'Budgets',        count: deleted?.budgets       || 0 },
+    { icon: '🎯', label: 'Savings Goals',  count: deleted?.goals         || 0 },
+    { icon: '🔔', label: 'Notifications',  count: deleted?.notifications || 0 },
+  ]
+  const total = stats.reduce((s, x) => s + x.count, 0)
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.80)', backdropFilter: 'blur(8px)' }}
+    >
+      <motion.div
+        initial={{ scale: 0.88, y: 24 }}
+        animate={{ scale: 1, y: 0 }}
+        className="w-full max-w-sm rounded-2xl border border-success/30 overflow-hidden shadow-2xl"
+        style={{ background: 'linear-gradient(135deg, #060d10 0%, #040a08 100%)' }}
+      >
+        <div className="p-6 text-center space-y-4">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
+            className="w-16 h-16 rounded-2xl bg-success/15 border border-success/30 flex items-center justify-center mx-auto"
+          >
+            <CheckCircle size={30} className="text-success" />
+          </motion.div>
+
+          <div>
+            <p className="font-black text-lg text-white">Data Reset Complete</p>
+            <p className="text-white/40 text-sm mt-1">{total} records deleted successfully</p>
+          </div>
+
+          <div className="grid grid-cols-5 gap-2">
+            {stats.map((s, i) => (
+              <motion.div key={i} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 + i * 0.07 }}
+                className="glass rounded-xl p-2 border border-white/5 text-center">
+                <div className="text-lg mb-0.5">{s.icon}</div>
+                <p className="text-success font-black text-sm">{s.count}</p>
+                <p className="text-white/25 text-[8px]">{s.label}</p>
+              </motion.div>
+            ))}
+          </div>
+
+          <p className="text-white/30 text-xs">
+            Aapka account active hai. Fresh start ke liye naya data add karein.
+          </p>
+
+          <button onClick={onClose}
+            className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg,#10B981,#059669)' }}>
+            Done
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 export default function ProfilePage() {
   const { user, updateUser } = useAuthStore()
-  const [activeTab, setActiveTab] = useState<Tab>('profile')
-  const [showOld, setShowOld] = useState(false)
-  const [showNew, setShowNew] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const queryClient = useQueryClient()
+  const [activeTab, setActiveTab]         = useState<Tab>('profile')
+  const [showOld, setShowOld]             = useState(false)
+  const [showNew, setShowNew]             = useState(false)
+  const [saving, setSaving]               = useState(false)
   const [avatarUploading, setAvatarUploading] = useState(false)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
-  const [exporting, setExporting] = useState(false)
+  const [exporting, setExporting]         = useState(false)
+  const [showResetModal, setShowResetModal]   = useState(false)
+  const [resetDeleted, setResetDeleted]       = useState<any>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handleResetSuccess = (deleted: any) => {
+    setShowResetModal(false)
+    setResetDeleted(deleted)
+    // Invalidate all cached queries so UI refreshes
+    queryClient.invalidateQueries()
+    toast.success('All data reset successfully!')
+  }
 
   const profileForm = useForm({
     defaultValues: {
@@ -156,6 +363,23 @@ export default function ProfilePage() {
 
   return (
     <div className="p-5 md:p-6 max-w-2xl mx-auto">
+
+      {/* ── Modals ── */}
+      <AnimatePresence>
+        {showResetModal && (
+          <ResetModal
+            onClose={() => setShowResetModal(false)}
+            onSuccess={handleResetSuccess}
+          />
+        )}
+        {resetDeleted && (
+          <ResetSuccessModal
+            deleted={resetDeleted}
+            onClose={() => setResetDeleted(null)}
+          />
+        )}
+      </AnimatePresence>
+
       <div className="mb-6">
         <h1 className="text-2xl font-bold mb-0.5">Profile Settings</h1>
         <p className="text-white/40 text-sm">Manage your account and view statistics</p>
@@ -406,6 +630,65 @@ export default function ProfilePage() {
               </div>
               <p className="text-white/20 text-[10px] mt-3">Exports current month data · More date ranges available in Reports page</p>
             </div>
+
+            {/* ── Danger Zone ── */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.15 }}
+              className="rounded-2xl border border-danger/25 overflow-hidden"
+              style={{ background: 'rgba(239,68,68,0.04)' }}
+            >
+              {/* Header */}
+              <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-danger/15"
+                style={{ background: 'rgba(239,68,68,0.07)' }}>
+                <AlertTriangle size={15} className="text-danger" />
+                <h2 className="font-black text-sm text-danger">Danger Zone</h2>
+              </div>
+
+              <div className="p-5 space-y-4">
+                {/* Reset data row */}
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm text-white/80 flex items-center gap-2">
+                      <Trash2 size={14} className="text-danger flex-shrink-0" />
+                      Reset All Financial Data
+                    </p>
+                    <p className="text-white/35 text-xs mt-1 leading-relaxed">
+                      Sabhi expenses, income, budgets, savings goals aur notifications delete ho jayenge.
+                      Account aur profile safe rahega.
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {['Expenses', 'Income', 'Budgets', 'Goals', 'Notifications'].map(tag => (
+                        <span key={tag} className="text-[10px] px-2 py-0.5 rounded-full border border-danger/20 text-danger/60"
+                          style={{ background: 'rgba(239,68,68,0.07)' }}>
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowResetModal(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold text-white border border-danger/40 hover:border-danger transition-all flex-shrink-0"
+                    style={{ background: 'rgba(239,68,68,0.12)' }}
+                  >
+                    <Trash2 size={14} className="text-danger" />
+                    <span className="text-danger">Reset Data</span>
+                  </motion.button>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl border border-warning/20"
+                  style={{ background: 'rgba(245,158,11,0.05)' }}>
+                  <AlertTriangle size={11} className="text-warning flex-shrink-0" />
+                  <p className="text-[10px] text-warning/70">
+                    Yeh action permanent hai — delete hone ke baad data wapas nahi aa sakta.
+                    Pehle Excel export kar lein.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

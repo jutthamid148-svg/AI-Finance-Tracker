@@ -59,10 +59,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex overflow-hidden" style={{ background: '#060d18' }}>
+    <div className="min-h-screen flex flex-col lg:flex-row overflow-hidden" style={{ background: '#060d18' }}>
 
       {/* ── Left Panel (hidden on mobile) ── */}
-      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative flex-col justify-between p-12 overflow-hidden">
+      <div className="hidden lg:flex lg:w-1/2 xl:w-[55%] relative flex-col justify-between p-8 xl:p-12 overflow-hidden">
         {/* Background gradient */}
         <div className="absolute inset-0" style={{
           background: 'linear-gradient(135deg, #0a0f1e 0%, #0d1526 40%, #111b35 100%)',
@@ -181,7 +181,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right Panel (form) ── */}
-      <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center px-5 py-10"
+      <div className="w-full lg:w-1/2 xl:w-[45%] flex items-center justify-center px-5 sm:px-8 py-8 sm:py-10"
         style={{ background: 'rgba(10,15,28,0.98)' }}>
 
         {/* Mobile logo */}
@@ -198,7 +198,7 @@ export default function LoginPage() {
           initial={{ opacity: 0, x: 30 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md sm:max-w-lg"
         >
           {/* Heading */}
           <div className="mb-8">

@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { useState, useEffect, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { SkeletonAIInsights } from '../../components/ui/Skeleton'
 import ErrorState from '../../components/ui/ErrorState'
 import {
@@ -203,10 +203,222 @@ function BudgetRuleBar({ label, pct, amount, color, target }: {
 }
 
 // ── Main Page ────────────────────────────────────────────────────────────────
+// ── Analysis steps definition ────────────────────────────────────────────────
+const ANALYSIS_STEPS = [
+  { label: 'Loading your transactions',        icon: '📥', detail: 'Fetching income & expenses from database...' },
+  { label: 'Analyzing spending categories',    icon: '🔍', detail: 'Grouping expenses by food, transport, bills...' },
+  { label: 'Running Polynomial Regression',    icon: '🤖', detail: 'Training ML model on your historical data...' },
+  { label: 'Generating 3-month forecast',      icon: '🔮', detail: 'Predicting expenses for next 3 months...' },
+  { label: 'Calculating financial health',     icon: '💊', detail: 'Computing savings rate, budget compliance...' },
+  { label: 'Detecting overspending patterns',  icon: '⚠️', detail: 'Comparing current vs previous month...' },
+  { label: 'Building personalized tips',       icon: '💡', detail: 'Generating recommendations for your data...' },
+  { label: 'Analysis complete!',               icon: '✅', detail: 'All insights ready.' },
+]
+
+// ── Analysis Overlay Component ────────────────────────────────────────────────
+function AnalysisOverlay({ onDone, insights, historicalData }: {
+  onDone: () => void
+  insights: any
+  historicalData: any[]
+}) {
+  const [step, setStep] = useState(0)
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    // Step through steps; last step = done state
+    if (step >= ANALYSIS_STEPS.length - 1) {
+      setDone(true)
+      return
+    }
+    const delays = [500, 700, 900, 750, 600, 650, 700]
+    const t = setTimeout(() => setStep(s => s + 1), delays[step] ?? 600)
+    return () => clearTimeout(t)
+  }, [step])
+
+  const analysis   = insights?.spending_analysis
+  const expPred    = insights?.predictions
+  const healthData = insights?.health_score
+  const totalExp   = analysis?.total_expenses || 0
+  const monthlyInc = analysis?.monthly_income  || 0
+  const catBreak   = analysis?.category_breakdown || []
+
+  const summaryStats = [
+    { label: 'Months Analyzed',   value: `${historicalData.length}`,                                          color: 'text-accent',   icon: '📅' },
+    { label: 'Total Expenses',    value: totalExp   > 0 ? `₨${(totalExp   / 1000).toFixed(1)}k` : '—',        color: 'text-danger',   icon: '💸' },
+    { label: 'Monthly Income',    value: monthlyInc > 0 ? `₨${(monthlyInc / 1000).toFixed(1)}k` : '—',        color: 'text-success',  icon: '💵' },
+    { label: 'Next Month Pred.',  value: expPred?.prediction > 0 ? `₨${(expPred.prediction / 1000).toFixed(1)}k` : '—', color: 'text-primary', icon: '🔮' },
+    { label: 'Health Score',      value: healthData?.score != null ? `${healthData.score}/100` : '—',          color: 'text-warning',  icon: '🏆' },
+    { label: 'Savings Rate',      value: analysis?.savings_rate != null ? `${Math.round(analysis.savings_rate)}%` : '—', color: 'text-emerald-400', icon: '💰' },
+    { label: 'Categories Found',  value: `${catBreak.length}`,                                                 color: 'text-secondary', icon: '📊' },
+    { label: 'Top Category',      value: catBreak[0]?.category ? catBreak[0].category.charAt(0).toUpperCase() + catBreak[0].category.slice(1) : '—', color: 'text-orange-400', icon: '🥇' },
+  ]
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center px-4"
+      style={{ background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(10px)' }}
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 30 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 30 }}
+        className="w-full max-w-lg rounded-2xl border border-primary/30 overflow-hidden shadow-2xl"
+        style={{ background: 'linear-gradient(135deg, #0c0c1e 0%, #080812 100%)' }}
+      >
+        {/* Header */}
+        <div className="px-6 py-4 border-b border-white/6"
+          style={{ background: 'linear-gradient(90deg, rgba(99,102,241,0.12), rgba(139,92,246,0.08))' }}>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center shadow-lg shadow-primary/30">
+              <Brain size={20} className="text-white" />
+            </div>
+            <div>
+              <p className="font-black text-base text-white">AI Analysis Running</p>
+              <p className="text-white/35 text-xs">Scikit-Learn · Polynomial Regression · Pandas</p>
+            </div>
+            {done && (
+              <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }}
+                className="ml-auto badge badge-success text-xs font-bold">
+                ✅ Complete
+              </motion.span>
+            )}
+          </div>
+        </div>
+
+        <div className="p-6 space-y-4">
+
+          {/* Steps list */}
+          <div className="space-y-2">
+            {ANALYSIS_STEPS.map((s, i) => {
+              const isActive  = i === step
+              const isPast    = i < step
+              const isFuture  = i > step
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: isFuture ? 0.3 : 1, x: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
+                    isActive ? 'border border-primary/40' : 'border border-transparent'
+                  }`}
+                  style={isActive ? { background: 'rgba(99,102,241,0.08)' } : {}}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm transition-all ${
+                    isPast   ? 'bg-success/20'  :
+                    isActive ? 'bg-primary/25 shadow-md shadow-primary/20' :
+                               'bg-white/5'
+                  }`}>
+                    {isPast ? '✓' : s.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-semibold transition-colors ${
+                      isPast ? 'text-white/50' : isActive ? 'text-white' : 'text-white/25'
+                    }`}>{s.label}</p>
+                    {isActive && (
+                      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="text-[10px] text-white/35 mt-0.5">{s.detail}</motion.p>
+                    )}
+                  </div>
+                  {isActive && !done && (
+                    <div className="flex gap-0.5 flex-shrink-0">
+                      {[0,1,2].map(j => (
+                        <motion.div key={j} className="w-1.5 h-1.5 rounded-full bg-primary/60"
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 0.8, repeat: Infinity, delay: j * 0.2 }} />
+                      ))}
+                    </div>
+                  )}
+                  {isPast && (
+                    <span className="text-success text-xs flex-shrink-0">✓</span>
+                  )}
+                </motion.div>
+              )
+            })}
+          </div>
+
+          {/* Progress bar */}
+          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: 'linear-gradient(90deg, #6366F1, #8B5CF6, #06B6D4)' }}
+              animate={{ width: `${((step + 1) / ANALYSIS_STEPS.length) * 100}%` }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            />
+          </div>
+          <p className="text-center text-white/20 text-[10px]">
+            {step + 1}/{ANALYSIS_STEPS.length} steps
+          </p>
+
+          {/* Results summary — shown when done */}
+          <AnimatePresence>
+            {done && (
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="space-y-3"
+              >
+                <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider">Analysis Results</p>
+                <div className="grid grid-cols-4 gap-2">
+                  {summaryStats.map((s, i) => (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, scale: 0.85 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ delay: 0.3 + i * 0.06 }}
+                      className="glass rounded-xl p-2.5 border border-white/5 text-center"
+                    >
+                      <div className="text-base mb-1">{s.icon}</div>
+                      <p className={`text-sm font-black ${s.color}`}>{s.value}</p>
+                      <p className="text-white/25 text-[9px] mt-0.5 leading-tight">{s.label}</p>
+                    </motion.div>
+                  ))}
+                </div>
+
+                {/* Top recommendations preview */}
+                {(insights?.recommendations || []).slice(0, 2).map((rec: string, i: number) => (
+                  <motion.div
+                    key={i}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.7 + i * 0.1 }}
+                    className="flex items-start gap-2 glass px-3 py-2 rounded-xl border border-warning/15"
+                  >
+                    <span className="text-warning text-xs mt-0.5">💡</span>
+                    <p className="text-xs text-white/60 leading-relaxed">{rec}</p>
+                  </motion.div>
+                ))}
+
+                <motion.button
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.9 }}
+                  onClick={onDone}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                  style={{ background: 'linear-gradient(135deg,#6366F1,#8B5CF6)', boxShadow: '0 6px 20px rgba(99,102,241,0.4)' }}
+                >
+                  View Full Report →
+                </motion.button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// ── Main Page ────────────────────────────────────────────────────────────────
 export default function AIInsightsPage() {
 
-  const [lastRunAt, setLastRunAt] = useState<Date | null>(null)
-  const initialLoadDone = useRef(false)
+  const [lastRunAt, setLastRunAt]       = useState<Date | null>(null)
+  const [showOverlay, setShowOverlay]   = useState(false)
+  const initialLoadDone                 = useRef(false)
 
   const { data: insights, isLoading: insightsLoading, error: insightsError, refetch: refetchInsights, isFetching: insightsFetching, dataUpdatedAt } = useQuery({
     queryKey: ['ai-insights'],
@@ -222,7 +434,8 @@ export default function AIInsightsPage() {
   }, [dataUpdatedAt])
 
   const handleRunAnalysis = () => {
-    setLastRunAt(new Date())   // update immediately on click
+    setLastRunAt(new Date())
+    setShowOverlay(true)
     refetchInsights()
   }
 
@@ -381,6 +594,17 @@ export default function AIInsightsPage() {
   return (
     <div className="p-5 md:p-6 max-w-7xl mx-auto">
 
+      {/* ── Analysis Overlay ── */}
+      <AnimatePresence>
+        {showOverlay && (
+          <AnalysisOverlay
+            onDone={() => setShowOverlay(false)}
+            insights={insights}
+            historicalData={historicalData}
+          />
+        )}
+      </AnimatePresence>
+
       {/* ── Header ── */}
       <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-7">
         <div className="flex items-center justify-between flex-wrap gap-3">
@@ -394,6 +618,19 @@ export default function AIInsightsPage() {
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
+            {/* Data quality badge */}
+            {expPred?.months_analyzed != null && (
+              <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-[11px] font-semibold
+                ${expPred.months_analyzed >= 4
+                  ? 'border-success/30 text-success bg-success/[0.07]'
+                  : expPred.months_analyzed >= 2
+                  ? 'border-warning/30 text-warning bg-warning/[0.07]'
+                  : 'border-danger/30 text-danger bg-danger/[0.07]'}`}>
+                <Activity size={11} />
+                {expPred.months_analyzed} months data
+                {expPred.months_analyzed < 3 && ' — add more for accuracy'}
+              </div>
+            )}
             {lastRunAt && (
               <div className="flex items-center gap-1.5 glass px-3 py-1.5 rounded-xl border border-white/10">
                 <Calendar size={12} className="text-white/30" />
@@ -434,8 +671,309 @@ export default function AIInsightsPage() {
             <MiniStat label="Total Expenses" value={`₨${Math.round(totalHistoricalExpenses / 1000)}k`} sub="All recorded" color="from-danger to-rose-600" icon={TrendingDown} />
             <MiniStat label="Avg Monthly" value={`₨${Math.round(avgMonthlyExpense / 1000)}k`} sub="Per month" color="from-warning to-amber-500" icon={BarChart2} />
             <MiniStat label="Current Savings" value={`₨${Math.round(currentMonthSavings / 1000)}k`} sub="This month" color="from-success to-emerald-600" icon={Wallet} trend={currentMonthSavings > 0 ? 'up' : 'down'} />
-            <MiniStat label="Next Month Forecast" value={expPred?.prediction > 0 ? `₨${Math.round(expPred.prediction / 1000)}k` : '—'} sub={expPred?.confidence ? `${expPred.confidence} confidence` : 'Need data'} color="from-accent to-cyan-600" icon={Target} trend="up" />
+            <MiniStat label="Next Month Forecast" value={expPred?.prediction > 0 ? `₨${Math.round(expPred.prediction / 1000)}k` : avgMonthlyExpense > 0 ? `₨${Math.round(avgMonthlyExpense / 1000)}k` : '—'} sub={expPred?.confidence ? `${expPred.confidence} confidence` : avgMonthlyExpense > 0 ? 'trend estimate' : 'Need data'} color="from-accent to-cyan-600" icon={Target} trend="up" />
           </motion.div>
+
+          {/* ════════════════════════════════════════════════════════════════
+              🔮  SMART PREDICTIONS PANEL  —  always visible
+          ════════════════════════════════════════════════════════════════ */}
+          {(() => {
+            if (historicalData.length === 0) return null
+
+            // ── derive prediction values (ML if available, else trend) ──
+            const last2 = historicalData.slice(-2)
+            const trendMult = last2.length >= 2 && last2[0].expenses > 0
+              ? Math.min(last2[1].expenses / last2[0].expenses, 1.5)   // cap at 150%
+              : 1
+            const incTrendMult = last2.length >= 2 && last2[0].income > 0
+              ? Math.min(last2[1].income / last2[0].income, 1.5)
+              : 1
+
+            const mlAvailable = expPred && predTotal > 0
+            const nextExp = mlAvailable ? predTotal : Math.round(avgMonthlyExpense * trendMult)
+            const nextInc = savPred?.monthly_income || Math.round((historicalData.reduce((s,m)=>s+m.income,0)/(historicalData.length||1)) * incTrendMult)
+            const nextSav = Math.max(nextInc - nextExp, 0)
+            const overBudget = nextInc > 0 && nextExp > nextInc
+            const confidence = mlAvailable ? expPred.confidence : historicalData.length >= 3 ? 'medium' : 'low'
+
+            // ── 3-month bar chart data ──
+            const mlMonths = expPred?.monthly_predictions || []
+            const forecast3 = mlMonths.length >= 3
+              ? mlMonths.slice(0, 3).map((m: any, i: number) => ({
+                  month: m.month, expenses: m.predicted,
+                  savings: Math.max(nextInc - m.predicted, 0),
+                  type: 'ml',
+                }))
+              : [1, 2, 3].map(i => {
+                  const exp = Math.round(nextExp * Math.pow(trendMult, i - 1))
+                  const now = new Date()
+                  now.setMonth(now.getMonth() + i)
+                  return {
+                    month: now.toLocaleString('default', { month: 'short', year: '2-digit' }),
+                    expenses: exp,
+                    savings: Math.max(nextInc - exp, 0),
+                    type: 'trend',
+                  }
+                })
+
+            // ── category trends ──
+            const catTrends = catPredictions.length > 0
+              ? catPredictions
+              : catBreak.map((c: any) => ({
+                  category: c.category,
+                  current: c.amount,
+                  predicted: Math.round(c.amount * trendMult),
+                  changePct: ((trendMult - 1) * 100),
+                }))
+
+            const confColor = confidence === 'high' ? '#10B981' : confidence === 'medium' ? '#F59E0B' : '#EF4444'
+            const confBadge = confidence === 'high' ? 'badge-success' : confidence === 'medium' ? 'badge-warning' : 'badge-danger'
+
+            return (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+                className="rounded-2xl border border-accent/25 overflow-hidden"
+                style={{ background: 'linear-gradient(135deg, rgba(6,182,212,0.07) 0%, rgba(99,102,241,0.06) 50%, rgba(139,92,246,0.05) 100%)' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-5 py-3.5 border-b border-white/6"
+                  style={{ background: 'linear-gradient(90deg, rgba(6,182,212,0.10), rgba(99,102,241,0.07))' }}>
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-accent to-primary flex items-center justify-center shadow-lg shadow-accent/30">
+                      <Sparkles size={15} className="text-white" />
+                    </div>
+                    <div>
+                      <p className="font-black text-sm">Smart Predictions</p>
+                      <p className="text-white/35 text-[10px]">
+                        {mlAvailable
+                          ? `Polynomial Regression · ${expPred.months_analyzed} months training`
+                          : `Trend Estimate · ${historicalData.length} months history`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`badge text-[10px] font-bold ${confBadge}`}>
+                      {confidence.toUpperCase()} CONFIDENCE
+                    </span>
+                    {!mlAvailable && (
+                      <span className="badge badge-primary text-[10px]">📊 Trend</span>
+                    )}
+                    {overBudget && (
+                      <span className="badge badge-danger text-[10px] animate-pulse">⚠ OVER BUDGET</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-5 space-y-5">
+
+                  {/* ── Row 1: 3 big stat cards ── */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+
+                    {/* Next month expenses */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+                      className="glass rounded-2xl p-4 border border-accent/20 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent/60 to-transparent" />
+                      <div className="flex items-center gap-2 mb-3">
+                        <TrendingUp size={13} className="text-accent" />
+                        <p className="text-white/40 text-xs font-semibold uppercase tracking-wide">Next Month Expenses</p>
+                      </div>
+                      <p className="text-3xl font-black mb-1"
+                        style={{ background: 'linear-gradient(135deg,#06B6D4,#6366F1)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                        ₨{nextExp >= 1000 ? `${(nextExp / 1000).toFixed(1)}k` : nextExp.toLocaleString()}
+                      </p>
+                      <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold ${trendMult > 1 ? 'bg-danger/15 text-danger' : 'bg-success/15 text-success'}`}>
+                        {trendMult > 1 ? <ArrowUpRight size={11} /> : <ArrowDownRight size={11} />}
+                        {Math.abs((trendMult - 1) * 100).toFixed(1)}% vs now
+                      </div>
+                      <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: nextInc > 0 ? `${Math.min((nextExp / nextInc) * 100, 100)}%` : '0%' }}
+                          transition={{ duration: 1 }}
+                          className="h-full rounded-full"
+                          style={{ background: overBudget ? '#EF4444' : '#06B6D4' }}
+                        />
+                      </div>
+                      <p className="text-white/25 text-[9px] mt-1">
+                        {nextInc > 0 ? `${Math.min(Math.round((nextExp / nextInc) * 100), 999)}% of income` : 'Add income for % calc'}
+                      </p>
+                    </motion.div>
+
+                    {/* Predicted savings */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+                      className="glass rounded-2xl p-4 border border-success/20 relative overflow-hidden"
+                    >
+                      <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-success/60 to-transparent" />
+                      <div className="flex items-center gap-2 mb-3">
+                        <PiggyBank size={13} className="text-success" />
+                        <p className="text-white/40 text-xs font-semibold uppercase tracking-wide">Predicted Savings</p>
+                      </div>
+                      <p className="text-3xl font-black text-success mb-1">
+                        ₨{nextSav >= 1000 ? `${(nextSav / 1000).toFixed(1)}k` : nextSav.toLocaleString()}
+                      </p>
+                      <p className="text-white/35 text-xs">
+                        {nextInc > 0 ? `${Math.round((nextSav / nextInc) * 100)}% savings rate` : 'per month'}
+                      </p>
+                      <div className="mt-2 h-1 bg-white/5 rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: nextInc > 0 ? `${Math.min((nextSav / nextInc) * 100, 100)}%` : '0%' }}
+                          transition={{ duration: 1, delay: 0.2 }}
+                          className="h-full rounded-full bg-success"
+                        />
+                      </div>
+                      <p className="text-white/25 text-[9px] mt-1">
+                        {(savPred?.predictions || []).length >= 6
+                          ? `6-mo total: ₨${((savPred.predictions[5]?.cumulative_savings || nextSav * 6) / 1000).toFixed(0)}k`
+                          : `6-mo estimate: ₨${((nextSav * 6) / 1000).toFixed(0)}k`}
+                      </p>
+                    </motion.div>
+
+                    {/* Budget status */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.26 }}
+                      className={`glass rounded-2xl p-4 relative overflow-hidden border ${overBudget ? 'border-danger/30' : 'border-success/20'}`}
+                    >
+                      <div className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent ${overBudget ? 'via-danger/60' : 'via-success/60'} to-transparent`} />
+                      <div className="flex items-center gap-2 mb-3">
+                        <ShieldCheck size={13} className={overBudget ? 'text-danger' : 'text-success'} />
+                        <p className="text-white/40 text-xs font-semibold uppercase tracking-wide">Budget Status</p>
+                      </div>
+                      <p className={`text-3xl font-black mb-1 ${overBudget ? 'text-danger' : 'text-success'}`}>
+                        {overBudget ? 'Over' : 'Safe'}
+                      </p>
+                      <p className="text-white/35 text-xs">
+                        {nextInc > 0
+                          ? overBudget
+                            ? `₨${Math.abs(predSurplus || nextExp - nextInc).toLocaleString()} deficit predicted`
+                            : `₨${(nextSav).toLocaleString()} surplus predicted`
+                          : 'Add income to check budget'}
+                      </p>
+                      <div className="mt-3 flex gap-1">
+                        {[20,40,60,80,100].map(v => {
+                          const pct = nextInc > 0 ? (nextExp / nextInc) * 100 : 0
+                          return (
+                            <div key={v} className={`flex-1 h-2 rounded-sm ${pct >= v ? (pct > 100 ? 'bg-danger' : pct > 80 ? 'bg-warning' : 'bg-success') : 'bg-white/8'}`} />
+                          )
+                        })}
+                      </div>
+                      <p className="text-white/20 text-[9px] mt-1">
+                        {nextInc > 0 ? `${Math.min(Math.round((nextExp / nextInc) * 100), 999)}% of income used` : ''}
+                      </p>
+                    </motion.div>
+                  </div>
+
+                  {/* ── Row 2: 3-month bar chart + category trends ── */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+
+                    {/* 3-month bar chart */}
+                    <div>
+                      <p className="text-white/25 text-[10px] font-semibold uppercase tracking-wider mb-3">
+                        3-Month Expense Projection
+                      </p>
+                      <ResponsiveContainer width="100%" height={160}>
+                        <BarChart data={forecast3} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+                          <defs>
+                            <linearGradient id="predExpGrad" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#06B6D4" stopOpacity={0.9} />
+                              <stop offset="100%" stopColor="#6366F1" stopOpacity={0.7} />
+                            </linearGradient>
+                            <linearGradient id="predSavGrad2" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="0%" stopColor="#10B981" stopOpacity={0.85} />
+                              <stop offset="100%" stopColor="#10B981" stopOpacity={0.5} />
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                          <XAxis dataKey="month" tick={{ fill: 'rgba(255,255,255,0.40)', fontSize: 10 }} axisLine={false} tickLine={false} />
+                          <YAxis tick={{ fill: 'rgba(255,255,255,0.30)', fontSize: 9 }} axisLine={false} tickLine={false} tickFormatter={v => `₨${(v/1000).toFixed(0)}k`} width={38} />
+                          <Tooltip content={<BarTip />} />
+                          <Bar dataKey="expenses" name="Expenses" fill="url(#predExpGrad)" radius={[5,5,0,0]} maxBarSize={44} />
+                          <Bar dataKey="savings" name="Savings" fill="url(#predSavGrad2)" radius={[5,5,0,0]} maxBarSize={44} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                      <div className="flex items-center gap-4 mt-2">
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-sm" style={{ background: '#06B6D4' }} />
+                          <span className="text-[10px] text-white/35">Expenses</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-2.5 h-2.5 rounded-sm bg-success" />
+                          <span className="text-[10px] text-white/35">Savings</span>
+                        </div>
+                        <span className="text-[9px] text-white/20 ml-auto">
+                          {mlAvailable ? '• ML forecast' : '• Trend estimate'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Category trends grid */}
+                    <div>
+                      <p className="text-white/25 text-[10px] font-semibold uppercase tracking-wider mb-3">
+                        Category Predictions
+                      </p>
+                      <div className="space-y-2">
+                        {catTrends.slice(0, 5).map((c: any, i: number) => {
+                          const color = CAT_COLORS[c.category] || '#6366F1'
+                          const isUp = c.changePct > 5
+                          const isDown = c.changePct < -5
+                          return (
+                            <motion.div
+                              key={i}
+                              initial={{ opacity: 0, x: 14 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.1 + i * 0.07 }}
+                              className="flex items-center gap-3 glass px-3 py-2 rounded-xl border border-white/5"
+                            >
+                              <span className="text-sm flex-shrink-0">{CAT_EMOJIS[c.category] || '💼'}</span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center justify-between mb-1">
+                                  <span className="text-xs text-white/70 capitalize font-medium">{c.category}</span>
+                                  <div className={`flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded-md
+                                    ${isUp ? 'bg-danger/15 text-danger' : isDown ? 'bg-success/15 text-success' : 'bg-white/8 text-white/40'}`}>
+                                    {isUp ? <ArrowUpRight size={10}/> : isDown ? <ArrowDownRight size={10}/> : null}
+                                    {Math.abs(c.changePct).toFixed(0)}%
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px]">
+                                  <span className="text-white/30">₨{(c.current/1000).toFixed(1)}k</span>
+                                  <span className="text-white/20">→</span>
+                                  <span className="font-bold" style={{ color }}>₨{(c.predicted/1000).toFixed(1)}k</span>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )
+                        })}
+                        {catTrends.length === 0 && (
+                          <div className="text-white/25 text-xs text-center py-6">Add expenses to see category predictions</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Confidence note ── */}
+                  <div className="flex items-center gap-2 pt-1 border-t border-white/5 flex-wrap">
+                    <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: confColor }} />
+                    <p className="text-[10px] text-white/30">
+                      {mlAvailable
+                        ? `ML model trained on ${expPred.months_analyzed} months · Polynomial Regression · ${confidence} confidence`
+                        : `Trend estimate based on ${historicalData.length} month${historicalData.length > 1 ? 's' : ''} · Run Analysis for ML predictions`}
+                    </p>
+                    {!mlAvailable && historicalData.length < 3 && (
+                      <span className="text-[10px] text-warning font-semibold ml-auto">
+                        ⚠ Add {3 - historicalData.length} more month(s) for ML accuracy
+                      </span>
+                    )}
+                  </div>
+
+                </div>
+              </motion.div>
+            )
+          })()}
 
           {/* ════════════════════════════════════════════════════════════════
               🔮  AI PREDICTION CENTER  —  MAIN FEATURE
@@ -1061,11 +1599,21 @@ export default function AIInsightsPage() {
                   </div>
                 )}
 
-                <div className="glass p-3.5 rounded-xl border border-white/5 text-xs text-white/35 leading-relaxed">
-                  <span className="text-primary font-semibold">ℹ️ Methodology: </span>
-                  AI predictions use Polynomial Regression (degree 2) trained on your {expPred?.months_analyzed || 0} months of expense history.
-                  Confidence is {expPred?.confidence || 'low'} — adding more monthly data improves prediction accuracy significantly.
-                  Savings rate targets: 10% = Fair, 20% = Good, 30%+ = Excellent.
+                <div className="glass p-3.5 rounded-xl border border-white/5 text-xs leading-relaxed">
+                  <div className="flex items-center gap-2 mb-2">
+                    <span className="text-primary font-semibold">ℹ️ Prediction Accuracy</span>
+                    <span className={`badge text-[9px] font-bold ${
+                      expPred?.confidence === 'high' ? 'badge-success' :
+                      expPred?.confidence === 'medium' ? 'badge-warning' : 'badge-danger'
+                    }`}>{(expPred?.confidence || 'low').toUpperCase()}</span>
+                  </div>
+                  <p className="text-white/35">
+                    Model: Polynomial Regression (deg {(expPred?.months_analyzed || 0) >= 4 ? '2' : '1'}) · Trained on {expPred?.months_analyzed || 0} months.
+                    {(expPred?.months_analyzed || 0) < 3
+                      ? ' ⚠️ Add 3+ months of expenses for high-confidence predictions.'
+                      : ' Accuracy improves as you log more months.'}
+                  </p>
+                  <p className="text-white/25 mt-1">Savings rate: 10% = Fair · 20% = Good · 30%+ = Excellent</p>
                 </div>
               </div>
             </Section>
@@ -1093,38 +1641,176 @@ export default function AIInsightsPage() {
           )}
 
           {/* ── Radar Chart: Spending Pattern ── */}
-          {radarData.length > 2 && (
-            <Section title="Spending Pattern Radar" subtitle="Category-wise spending distribution — Spider Chart" icon={Activity} color="from-secondary to-purple-600" badge="Radar">
-              <ResponsiveContainer width="100%" height={300}>
-                <RadarChart data={radarData} margin={{ top: 10, right: 20, bottom: 10, left: 20 }}>
-                  <PolarGrid stroke="rgba(255,255,255,0.07)" />
-                  <PolarAngleAxis
-                    dataKey="category"
-                    tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }}
-                    tickFormatter={(v: string) => `${CAT_EMOJIS[v] || '💼'} ${v}`}
-                  />
-                  <PolarRadiusAxis
-                    angle={30}
-                    tick={{ fill: 'rgba(255,255,255,0.25)', fontSize: 9 }}
-                    tickFormatter={(v: number) => `₨${(v / 1000).toFixed(0)}k`}
-                  />
-                  <Radar name="Your Spending" dataKey="amount" stroke="#6366F1" fill="#6366F1" fillOpacity={0.25} strokeWidth={2}
-                    dot={{ fill: '#6366F1', r: 4, strokeWidth: 0 }} />
-                  <Tooltip content={<RadarTip />} />
-                  <Legend wrapperStyle={{ fontSize: '12px', color: 'rgba(255,255,255,0.45)', paddingTop: '8px' }} />
-                </RadarChart>
-              </ResponsiveContainer>
-              <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-2">
-                {radarData.slice(0, 4).map((d: any, i: number) => (
-                  <div key={i} className="glass p-2.5 rounded-xl border border-white/5 text-center">
-                    <p className="text-lg mb-0.5">{CAT_EMOJIS[d.category] || '💼'}</p>
-                    <p className="text-white/50 text-[10px] capitalize">{d.category}</p>
-                    <p className="text-white/85 text-xs font-bold mt-0.5">₨{Number(d.amount).toLocaleString()}</p>
+          {radarData.length > 0 && (() => {
+            // Merge current + predicted into one radar dataset
+            const radarChartData = radarData.map((r: any) => {
+              const pred = catPredictions.find((c: any) => c.category === r.category)
+              return {
+                category: r.category,
+                current: r.amount,
+                predicted: pred ? pred.predicted : r.amount,
+              }
+            })
+            const topCategory = radarChartData.reduce((a: any, b: any) => a.current > b.current ? a : b, radarChartData[0])
+
+            return (
+              <Section
+                title="Spending Pattern Radar"
+                subtitle="Current spending vs next-month prediction — Spider Chart"
+                icon={Activity}
+                color="from-secondary to-purple-600"
+                badge="Radar"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+
+                  {/* Chart */}
+                  <div className="md:col-span-2 relative">
+                    {/* Glow behind chart */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="w-48 h-48 rounded-full blur-3xl opacity-20"
+                        style={{ background: 'radial-gradient(circle, #6366F1 0%, #8B5CF6 50%, transparent 70%)' }} />
+                    </div>
+                    <ResponsiveContainer width="100%" height={320}>
+                      <RadarChart data={radarChartData} margin={{ top: 14, right: 28, bottom: 14, left: 28 }}>
+                        <defs>
+                          <radialGradient id="radarGlow" cx="50%" cy="50%" r="50%">
+                            <stop offset="0%" stopColor="#6366F1" stopOpacity={0.15} />
+                            <stop offset="100%" stopColor="#6366F1" stopOpacity={0} />
+                          </radialGradient>
+                        </defs>
+                        <PolarGrid
+                          stroke="rgba(255,255,255,0.08)"
+                          strokeDasharray="3 3"
+                        />
+                        <PolarAngleAxis
+                          dataKey="category"
+                          tick={{ fill: 'rgba(255,255,255,0.55)', fontSize: 11, fontWeight: 500 }}
+                          tickFormatter={(v: string) => `${CAT_EMOJIS[v] || '💼'} ${v}`}
+                        />
+                        <PolarRadiusAxis
+                          angle={90}
+                          tick={{ fill: 'rgba(255,255,255,0.20)', fontSize: 9 }}
+                          tickFormatter={(v: number) => `₨${(v / 1000).toFixed(0)}k`}
+                          stroke="rgba(255,255,255,0.06)"
+                        />
+                        {/* Current spending */}
+                        <Radar
+                          name="Current Spending"
+                          dataKey="current"
+                          stroke="#6366F1"
+                          fill="#6366F1"
+                          fillOpacity={0.22}
+                          strokeWidth={2.5}
+                          dot={{ fill: '#6366F1', r: 5, strokeWidth: 2, stroke: 'rgba(99,102,241,0.4)' }}
+                        />
+                        {/* Predicted — only if predictions exist */}
+                        {catPredictions.length > 0 && (
+                          <Radar
+                            name="Predicted (Next Month)"
+                            dataKey="predicted"
+                            stroke="#06B6D4"
+                            fill="#06B6D4"
+                            fillOpacity={0.12}
+                            strokeWidth={2}
+                            strokeDasharray="5 3"
+                            dot={{ fill: '#06B6D4', r: 4, strokeWidth: 0 }}
+                          />
+                        )}
+                        <Tooltip content={({ active, payload }: any) => {
+                          if (!active || !payload?.length) return null
+                          const cat = payload[0]?.payload?.category
+                          return (
+                            <div className="glass rounded-xl px-3.5 py-3 border border-white/10 text-xs shadow-xl">
+                              <p className="font-bold text-white/80 mb-2 capitalize">
+                                {CAT_EMOJIS[cat] || '💼'} {cat}
+                              </p>
+                              {payload.map((p: any, i: number) => (
+                                <p key={i} className="mb-0.5 font-semibold" style={{ color: p.color }}>
+                                  {p.name}: ₨{Number(p.value).toLocaleString()}
+                                </p>
+                              ))}
+                            </div>
+                          )
+                        }} />
+                        <Legend
+                          wrapperStyle={{ fontSize: '11px', color: 'rgba(255,255,255,0.45)', paddingTop: '10px' }}
+                        />
+                      </RadarChart>
+                    </ResponsiveContainer>
                   </div>
-                ))}
-              </div>
-            </Section>
-          )}
+
+                  {/* Category summary cards */}
+                  <div className="space-y-2">
+                    <p className="text-white/25 text-[10px] font-semibold uppercase tracking-wider mb-3">
+                      Category Breakdown
+                    </p>
+                    {radarChartData.map((d: any, i: number) => {
+                      const color = CAT_COLORS[d.category] || '#6366F1'
+                      const pct = analysis?.total_expenses > 0
+                        ? Math.round((d.current / analysis.total_expenses) * 100)
+                        : 0
+                      const isTop = d.category === topCategory?.category
+                      return (
+                        <motion.div
+                          key={i}
+                          initial={{ opacity: 0, x: 12 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.06 }}
+                          className={`glass rounded-xl px-3 py-2.5 border transition-all ${isTop ? 'border-primary/30' : 'border-white/5'}`}
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm">{CAT_EMOJIS[d.category] || '💼'}</span>
+                              <span className="text-xs text-white/70 capitalize font-medium">{d.category}</span>
+                              {isTop && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold"
+                                  style={{ background: 'rgba(99,102,241,0.2)', color: '#818CF8' }}>TOP</span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-white/40">{pct}%</span>
+                          </div>
+                          <div className="w-full h-1.5 bg-white/5 rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.8, delay: 0.2 + i * 0.06 }}
+                              className="h-full rounded-full"
+                              style={{ background: color }}
+                            />
+                          </div>
+                          <div className="flex justify-between mt-1">
+                            <span className="text-[10px] font-bold" style={{ color }}>
+                              ₨{(d.current / 1000).toFixed(1)}k
+                            </span>
+                            {catPredictions.length > 0 && d.predicted !== d.current && (
+                              <span className={`text-[9px] font-semibold ${d.predicted > d.current ? 'text-danger' : 'text-success'}`}>
+                                → ₨{(d.predicted / 1000).toFixed(1)}k
+                              </span>
+                            )}
+                          </div>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+
+                </div>
+
+                {/* Insight strip */}
+                {topCategory && (
+                  <div className="mt-5 flex items-center gap-3 glass px-4 py-3 rounded-xl border border-secondary/20">
+                    <span className="text-xl">{CAT_EMOJIS[topCategory.category] || '💼'}</span>
+                    <p className="text-xs text-white/60 leading-relaxed">
+                      <span className="text-white font-bold capitalize">{topCategory.category}</span> is your biggest spending category at{' '}
+                      <span className="text-primary font-bold">₨{Number(topCategory.current).toLocaleString()}</span>
+                      {catPredictions.length > 0 && topCategory.predicted > topCategory.current
+                        ? <span className="text-danger"> — predicted to rise to ₨{(topCategory.predicted / 1000).toFixed(1)}k next month.</span>
+                        : '.'}
+                    </p>
+                  </div>
+                )}
+              </Section>
+            )
+          })()}
 
           {/* ── Composed Chart: Monthly Income vs Expenses ── */}
           {monthlyBarData.length > 0 && (
@@ -1240,9 +1926,25 @@ export default function AIInsightsPage() {
                 <Brain size={28} className="text-primary" />
               </div>
               <h3 className="font-bold text-lg mb-2">No Data to Analyze Yet</h3>
-              <p className="text-white/40 text-sm max-w-sm mx-auto">
-                Add income and expense transactions. The AI will analyze spending patterns and predict future expenses using ML.
+              <p className="text-white/40 text-sm max-w-sm mx-auto mb-6">
+                The ML model needs your real transaction data to generate accurate predictions. Follow these steps:
               </p>
+              <div className="flex flex-col gap-3 max-w-xs mx-auto text-left">
+                {[
+                  { step: '1', label: 'Add your monthly income', sub: 'Go to Income page → Add Income' },
+                  { step: '2', label: 'Log your expenses', sub: 'Go to Expenses page → add food, transport, bills…' },
+                  { step: '3', label: 'Add at least 2–3 months of data', sub: 'More months = higher confidence predictions' },
+                  { step: '4', label: 'Click "Run Analysis"', sub: 'AI will generate forecasts, health score & tips' },
+                ].map(({ step, label, sub }) => (
+                  <div key={step} className="flex items-start gap-3 glass p-3 rounded-xl border border-white/6">
+                    <div className="w-6 h-6 rounded-full bg-primary/20 text-primary text-xs font-black flex items-center justify-center flex-shrink-0 mt-0.5">{step}</div>
+                    <div>
+                      <p className="text-sm font-semibold text-white/80">{label}</p>
+                      <p className="text-white/35 text-xs mt-0.5">{sub}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </motion.div>
           )}
 

@@ -141,8 +141,12 @@ const navSections = [
   {
     label: 'INTELLIGENCE',
     items: [
-      { to: '/dashboard/ai-insights', icon: Brain,    label: 'AI Insights', end: false, color: '#8B5CF6' },
-      { to: '/dashboard/reports',     icon: FileText, label: 'Reports',     end: false, color: '#EC4899' },
+      { to: '/dashboard/ai-insights', icon: Brain,        label: 'AI Insights', end: false, color: '#8B5CF6' },
+      { to: '/dashboard/reports',     icon: FileText,     label: 'Reports',     end: false, color: '#EC4899' },
+      { to: '/dashboard/reminders',   icon: Bell,         label: 'Reminders',   end: false, color: '#F59E0B' },
+      { to: '/dashboard/net-worth',   icon: Info,         label: 'Net Worth',   end: false, color: '#10B981' },
+      { to: '/dashboard/recurring',   icon: CheckCheck,   label: 'Recurring',   end: false, color: '#06B6D4' },
+      { to: '/dashboard/calendar',    icon: Clock,        label: 'Calendar',    end: false, color: '#EC4899' },
     ],
   },
 ]

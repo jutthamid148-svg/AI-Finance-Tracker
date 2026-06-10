@@ -1,6 +1,9 @@
 import axios from 'axios'
 
-const API_BASE_URL = 'https://backend-jade-eight-14.vercel.app/api'
+const rawApiUrl = import.meta.env.VITE_API_URL ||
+  (import.meta.env.DEV ? 'http://localhost:8000/api' : 'https://backend-jade-eight-14.vercel.app/api')
+
+const API_BASE_URL = rawApiUrl.replace(/^\uFEFF/, '').trim()
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -82,6 +85,7 @@ export const authAPI = {
   resetPassword: (data: any) => api.post('/auth/reset-password/', data),
   verifyEmail: (token: string) => api.post('/auth/verify-email/', { token }),
   dashboardStats: () => api.get('/auth/dashboard/stats/'),
+  resetData: () => api.post('/auth/reset-data/', { confirm: 'RESET' }),
   notifications: () => api.get('/auth/notifications/'),
   markAllRead: () => api.post('/auth/notifications/mark-read/'),
   markOneRead: (id: string) => api.post(`/auth/notifications/${id}/mark-read/`),

@@ -43,22 +43,6 @@ function StatCounter({ value, suffix, label, prefix = '' }: {
   )
 }
 
-// ── Floating particle ─────────────────────────────────────────────────────────
-const FINANCE_SYMBOLS = ['₨', '%', '$', '📈', '💰', '📊', '🏦', '💹', '₨', '%', '📈', '💰']
-
-function FloatingSymbol({ symbol, style, delay }: { symbol: string; style: React.CSSProperties; delay: number }) {
-  return (
-    <motion.div
-      className="absolute pointer-events-none select-none font-bold"
-      style={{ ...style, color: 'rgba(99,102,241,0.18)', fontSize: style.fontSize || '14px' }}
-      animate={{ y: [0, -40, 0], opacity: [0.08, 0.22, 0.08], rotate: [-5, 5, -5] }}
-      transition={{ duration: 6 + delay * 1.5, repeat: Infinity, ease: 'easeInOut', delay }}
-    >
-      {symbol}
-    </motion.div>
-  )
-}
-
 // ── Cursor glow ───────────────────────────────────────────────────────────────
 function CursorGlow() {
   const x = useMotionValue(-200)
@@ -73,7 +57,7 @@ function CursorGlow() {
   return (
     <motion.div className="fixed pointer-events-none z-50 rounded-full"
       style={{ left: sx, top: sy, translateX: '-50%', translateY: '-50%', width: 320, height: 320,
-        background: 'radial-gradient(circle, rgba(99,102,241,0.055) 0%, transparent 65%)' }} />
+        background: 'radial-gradient(circle, rgba(255,255,255,0.03) 0%, transparent 65%)' }} />
   )
 }
 
@@ -334,18 +318,6 @@ const techStack = [
   { name: 'Recharts',      icon: '📊',  desc: 'Charts' },
 ]
 
-const SYMBOL_SIZES = ['12px', '14px', '16px', '18px', '20px', '22px']
-const financeParticles = Array.from({ length: 22 }, (_, i) => ({
-  id: i,
-  symbol: FINANCE_SYMBOLS[i % FINANCE_SYMBOLS.length],
-  style: {
-    left: `${(i * 4.5 + Math.random() * 5) % 100}%`,
-    top: `${(i * 4.1 + Math.random() * 5) % 95}%`,
-    fontSize: SYMBOL_SIZES[i % SYMBOL_SIZES.length],
-  },
-  delay: (i * 0.4) % 5,
-}))
-
 // ── Page ─────────────────────────────────────────────────────────────────────
 export default function LandingPage() {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -364,35 +336,14 @@ export default function LandingPage() {
   }
 
   return (
-    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#08081a' }}>
+    <div className="min-h-screen text-white overflow-x-hidden" style={{ background: '#000000' }}>
       <CursorGlow />
 
       {/* ── Background: Animated Blobs + Grid + Particles ── */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <motion.div className="absolute -top-48 -left-48 w-[700px] h-[700px] rounded-full blur-[160px]"
-          style={{ background: 'rgba(192,38,211,0.08)' }}
-          animate={{ x: [0, 40, 0], y: [0, 30, 0] }}
-          transition={{ duration: 18, repeat: Infinity, ease: 'easeInOut' }}
-        />
-        <motion.div className="absolute top-1/3 -right-48 w-[600px] h-[600px] rounded-full blur-[140px]"
-          style={{ background: 'rgba(124,58,237,0.07)' }}
-          animate={{ x: [0, -50, 0], y: [0, 40, 0] }}
-          transition={{ duration: 22, repeat: Infinity, ease: 'easeInOut', delay: 4 }}
-        />
-        <motion.div className="absolute -bottom-24 left-1/3 w-[500px] h-[500px] rounded-full blur-[120px]"
-          style={{ background: 'rgba(255,107,157,0.06)' }}
-          animate={{ x: [0, 30, 0], y: [0, -40, 0] }}
-          transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut', delay: 8 }}
-        />
-        {/* Dot grid */}
-        <div className="absolute inset-0 opacity-[0.018]" style={{
-          backgroundImage: `radial-gradient(circle at 1px 1px, rgba(255,255,255,0.8) 1px, transparent 0)`,
-          backgroundSize: '32px 32px',
+        <div className="absolute inset-0" style={{
+          background: 'radial-gradient(circle at 18% 20%, rgba(255,255,255,0.03), transparent 25%), radial-gradient(circle at 80% 80%, rgba(255,255,255,0.02), transparent 20%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0) 35%, rgba(0,0,0,0.35))',
         }} />
-        {/* Floating finance symbols */}
-        {financeParticles.map(p => (
-          <FloatingSymbol key={p.id} symbol={p.symbol} style={p.style} delay={p.delay} />
-        ))}
       </div>
 
       {/* ── Navbar ── */}
@@ -401,7 +352,7 @@ export default function LandingPage() {
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
         className="fixed top-0 left-0 right-0 z-50 border-b border-white/[0.06]"
-        style={{ background: 'rgba(6,13,24,0.92)', backdropFilter: 'blur(24px)' }}
+        style={{ background: 'rgba(0,0,0,0.92)', backdropFilter: 'blur(24px)' }}
       >
         <div className="max-w-7xl mx-auto px-5 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2.5 group">
@@ -461,7 +412,7 @@ export default function LandingPage() {
               animate={{ opacity: 1, height: 'auto' }}
               exit={{ opacity: 0, height: 0 }}
               className="md:hidden border-t border-white/5 px-5 py-4 flex flex-col gap-4 overflow-hidden"
-              style={{ background: 'rgba(6,13,24,0.98)' }}
+              style={{ background: 'rgba(0,0,0,0.98)' }}
             >
               {[['#features','Features'],['#how-it-works','How It Works'],['#stats','Stats'],['#testimonials','Reviews']].map(([href, label]) => (
                 <a key={href} href={href} className="text-white/55 hover:text-white transition-colors text-sm"
@@ -714,8 +665,8 @@ export default function LandingPage() {
           Built with Industry-Standard Technologies
         </p>
         <div className="relative">
-          <div className="absolute left-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to right, #060d18, transparent)' }} />
-          <div className="absolute right-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to left, #060d18, transparent)' }} />
+          <div className="absolute left-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to right, #000000, transparent)' }} />
+          <div className="absolute right-0 top-0 bottom-0 w-20 z-10" style={{ background: 'linear-gradient(to left, #000000, transparent)' }} />
           <motion.div
             className="flex gap-3 w-max"
             animate={{ x: ['0%', '-50%'] }}
@@ -982,7 +933,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-1">
               {['AR','FK','BH','SM','UT','ZG'].map((init, i) => (
                 <div key={i} className={`w-7 h-7 rounded-full flex items-center justify-center text-[9px] font-bold border-2 border-[#060d18] ${['bg-blue-500','bg-purple-500','bg-green-500','bg-orange-500','bg-teal-500','bg-pink-500'][i]}`}
-                  style={{ marginLeft: i > 0 ? '-6px' : '0', zIndex: 10 - i }}>{init}</div>
+                  style={{ marginLeft: i > 0 ? '-6px' : '0', zIndex: 10 - i, borderColor: '#000' }}>{init}</div>
               ))}
               <span className="text-white/35 text-xs ml-2">+12k users</span>
             </div>

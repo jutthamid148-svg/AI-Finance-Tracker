@@ -166,13 +166,20 @@ SIMPLE_JWT = {
 }
 
 # CORS — specific origins only; CORS_ALLOW_ALL_ORIGINS + credentials violates the spec
-_cors_origins = ['http://localhost:5173', 'http://localhost:3000']
+_cors_origins = [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://aifinancepk.site',
+]
 _frontend_url = os.getenv('FRONTEND_URL', '')
 if _frontend_url and _frontend_url not in _cors_origins:
     _cors_origins.append(_frontend_url)
 CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOWED_ORIGINS = _cors_origins
-CORS_ALLOWED_ORIGIN_REGEXES = [r'^https://[\w-]+\.vercel\.app$']
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://[\w-]+\.vercel\.app$',
+    r'^https://aifinancepk\.site$',
+]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     'accept',

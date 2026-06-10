@@ -181,6 +181,13 @@ railway up
 vercel --prod
 ```
 
+### Local frontend development
+```bash
+# Run frontend in development mode using the local backend.
+# Set VITE_API_URL=http://localhost:8000/api before starting the frontend.
+npm run dev
+```
+
 ---
 
 ## 👥 Team
